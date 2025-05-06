@@ -100,11 +100,11 @@ def generate_risk_map(risks, title):
     plt.text(0.2, 0.2, 'Low Risk', fontsize=12, color='green')
     plt.grid(True)
     #save the figure
-    plt.savefig(f"{title}.png", dpi=600, bbox_inches='tight')
+    plt.savefig(f"Figure for baseline/{title}.png", dpi=600, bbox_inches='tight')
     #plt.show()
 
 # Generate risk maps for each category
-generate_risk_map(technical_risks, "Technical Risks Map")
-generate_risk_map(cost_risks, "Cost Risks Map")
-generate_risk_map(scheduling_risks, "Scheduling Risks Map")
-generate_risk_map(programmatic_risks, "Programmatic Risks Map")
+generate_risk_map(technical_risks, "Technical riskmap")
+generate_risk_map(cost_risks, "cost riskmap")
+generate_risk_map(scheduling_risks, "scheduling riskmap")
+generate_risk_map(programmatic_risks, "programmatic riskmap")
