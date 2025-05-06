@@ -2,21 +2,22 @@ import aerosandbox as asb
 import aerosandbox.numpy as np
 
 wing_airfoil = asb.Airfoil("sd7037")
-N_cords = 4
+N_cords = 2
 g = 9.81
-payload_mass = 3962  #kg
+payload_mass = 2000  #kg
 W = payload_mass * g
 V = 30  # m/s (constant for now)
 solar_intensity = 1380
 solar_eff_fact = 0.2
-altitude = 20000
+altitude = 10000
 atm = asb.Atmosphere(altitude=altitude)
 
 
 opti = asb.Opti()
 
 cords = opti.variable(init_guess=8 * np.ones(N_cords), n_vars=N_cords)
-b = opti.variable(init_guess=40, upper_bound=50, lower_bound=30)
+b = opti.variable(init_guess=40, upper_bound=100, lower_bound=30)
+V = opti.variable(init_guess=30, upper_bound=100, lower_bound=0)
 
 # Define y-locations based on variable b
 y_sections = np.linspace(0, b / 2, N_cords)
@@ -53,8 +54,8 @@ op_point = asb.OperatingPoint(
 vlm = asb.VortexLatticeMethod(
     airplane=airplane,
     op_point=op_point,
-    spanwise_resolution=10,
-    chordwise_resolution=10
+    spanwise_resolution=15,
+    chordwise_resolution=15
 )
 
 aero = vlm.run()
@@ -87,8 +88,9 @@ print("CL:", sol(aero['CL']))
 print("CD:", sol(aero['CD']))
 print("Wing structural weight (N):", k * sol(b) * sol(wing.area()))
 print("Power available: ", solar_eff_fact * solar_intensity * sol(wing.area()))
-print("Power req: ", 0.5 * atm.density() * V**2 * sol(wing.area()) * sol(aero['CD']) * V)
-
+print("Power req: ", 0.5 * atm.density() * sol(V)**2 * sol(wing.area()) * sol(aero['CD']) * sol(V))
+print("Optimal V: ", sol(V))
 # Visualize
 vlm = sol(vlm)
 vlm.draw(show_kwargs=dict(jupyter_backend="static"))
+
