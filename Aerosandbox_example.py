@@ -2,18 +2,20 @@ import aerosandbox as asb
 import aerosandbox.numpy as np
 
 wing_airfoil = asb.Airfoil("sd7037")
-N_cords = 3
+N_cords = 4
 g = 9.81
 payload_mass = 3962  #kg
 W = payload_mass * g
 V = 30  # m/s (constant for now)
-altitude = 2000
+solar_intensity = 1380
+solar_eff_fact = 0.2
+altitude = 20000
 atm = asb.Atmosphere(altitude=altitude)
 
 opti = asb.Opti()
 
 cords = opti.variable(init_guess=8 * np.ones(N_cords), n_vars=N_cords)
-b = opti.variable(init_guess=40, upper_bound=50, lower_bound=0)
+b = opti.variable(init_guess=40, upper_bound=50, lower_bound=30)
 
 # Define y-locations based on variable b
 y_sections = np.linspace(0, b / 2, N_cords)
@@ -64,9 +66,13 @@ opti.subject_to(
     0.5 * atm.density() * V**2 * aero['CL'] * wing.area() == W
 )
 
-# Objective: Minimize drag power (drag force * velocity)
+
+opti.subject_to(
+    0.5 * atm.density() * V**2 * wing.area() * aero['CD'] * V < solar_eff_fact * solar_intensity * wing.area()
+)
+
 opti.minimize(
-    0.5 * atm.density() * V**2 * wing.area() * aero['CD'] * V
+    b
 )
 
 sol = opti.solve()
@@ -79,6 +85,8 @@ print("Wing area:", sol(wing.area()))
 print("CL:", sol(aero['CL']))
 print("CD:", sol(aero['CD']))
 print("Wing structural weight (N):", k * sol(b) * sol(wing.area()))
+print("Power available: ", solar_eff_fact * solar_intensity * sol(wing.area()))
+print("Power req: ", 0.5 * atm.density() * V**2 * sol(wing.area()) * sol(aero['CD']) * V)
 
 # Visualize
 vlm = sol(vlm)
