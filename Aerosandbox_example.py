@@ -12,6 +12,7 @@ solar_eff_fact = 0.2
 altitude = 20000
 atm = asb.Atmosphere(altitude=altitude)
 
+
 opti = asb.Opti()
 
 cords = opti.variable(init_guess=8 * np.ones(N_cords), n_vars=N_cords)
