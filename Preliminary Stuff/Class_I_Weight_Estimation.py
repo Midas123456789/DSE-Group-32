@@ -173,6 +173,7 @@ if __name__ == "__main__":
     Class_I_Weight_Estimate = Class_I_Weight_Estimation(
         
         # Weight Estimation
+        payload_weight_kg      = req.payload_weight_kg
         residual_fuel_fraction = 0.00,                       # Fraction of fuel weight used as residuel
         empty_weight_fraction  = 0.7,                        # Fraction of empty weight compared to MTOW
         initial_mtow_guess_kg  = 8 * req.payload_weight_kg,  # Initial guessed MTOW
