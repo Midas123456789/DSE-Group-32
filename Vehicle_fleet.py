@@ -67,6 +67,13 @@ circles_gdf = circles_gdf.drop_duplicates('geometry')
 centers_gdf = circles_gdf.copy()
 centers_gdf["geometry"] = centers_gdf["geometry"].centroid
 
+centers_gdf_wgs84 = centers_gdf.to_crs(epsg=4326)
+
+# Print longitude and latitude of each center
+for idx, row in centers_gdf_wgs84.iterrows():
+    lon, lat = row.geometry.x, row.geometry.y
+    print(f"Longitude: {lon:.6f}, Latitude: {lat:.6f}")
+
 # Plot
 fig, ax = plt.subplots(figsize=(12, 12))
 grid.plot(ax=ax, edgecolor='black', facecolor='none')
