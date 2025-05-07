@@ -1,0 +1,128 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from ISA_Calculator import ISA_Calculator
+
+class Aerodynamic:
+    def __init__(self, weight, altitude):
+        """
+        Base aerodynamic model.
+        Parameters:
+        - weight: in Newtons
+        - altitude: in meters
+        """
+        self.weight = weight
+        self.altitude = altitude
+
+        self.isa = ISA_Calculator(altitude)
+        self.rho = self.isa.results["Density [kg/m³]"]
+        self.g = self.isa.results["Gravity [m/s²]"]
+        self.T = self.isa.results["Temperature [K]"]
+        self.P = self.isa.results["Pressure [Pa]"]
+
+class AircraftAerodynamic(Aerodynamic):
+    def plot_feasible_S_V(self, CL):
+        """
+        Plot feasible wing area (S) vs. velocity (V) for different coefficients of lift.
+
+        Parameters:
+        - CL: float or list of floats (lift coefficients)
+        """
+        rho = self.rho
+        V = np.linspace(10, 200, 500)
+
+        if not isinstance(CL, list):
+            CL = [CL]
+
+        plt.figure(figsize=(10, 6))
+        for cl in CL:
+            S = (2 * self.weight) / (rho * V**2 * cl)
+            plt.plot(V, S, label=f'CL = {cl}')
+            plt.fill_between(V, 0, S, alpha=0.1)
+
+        plt.xlabel('Velocity (m/s)')
+        plt.ylabel('Wing Area (m²)')
+        plt.title(f'Feasible Wing Area (S) vs Velocity (V)\nAltitude: {self.altitude} m, Weight: {self.weight} N')
+        plt.xlim(0, 100)
+        plt.grid(True)
+        plt.legend()
+        plt.show()
+
+class AirshipAerodynamic(Aerodynamic):
+    def __init__(self, weight, altitude, gas_type):
+        """
+        Airship aerodynamic model.
+
+        Parameters:
+        - gas_type: 'hydrogen' or 'helium'
+        """
+        super().__init__(weight, altitude)
+
+        if gas_type not in ["hydrogen", "helium"]:
+            raise ValueError("Gas type must be 'hydrogen' or 'helium'")
+        self.gas_type = gas_type
+
+    def plot_feasible_h_V(self):
+        """
+        Plot feasible altitude (h) vs. Volume for the airship.
+        L>W
+
+        Parameters:
+        - None
+        """
+
+        h = np.linspace(1000, 25000, 500)  # Volume in m³
+        rho = []
+        for i in range(len(h)):
+            self.isa.define_properties(h[i])
+            rho.append(self.isa.results["Density [kg/m³]"])
+
+        rho = np.array(rho)
+        rho_gas = {
+            "hydrogen": 0.0899,  # kg/m³
+            "helium": 0.1786     # kg/m³
+        }[self.gas_type]
+        print(h)
+
+        V = (self.weight / (rho - rho_gas))  # Convert to m³
+        print(V)
+        plt.figure(figsize=(10, 6))
+        plt.plot(h, V, label=f'Gas Type: {self.gas_type.capitalize()}')
+        # plt.fill_between(h, 0, V, alpha=0.1)
+        plt.xlabel('Altitude (m)')
+        plt.ylabel('Volume (m³)')
+        plt.title(f'Feasible Altitude (h) vs Volume (V)\nWeight: {self.weight} N')
+        plt.xlim(0, 25000)
+        plt.axhline(30000, color='red', linestyle='--', label='Max Volume (1e6 ft³)')
+        plt.ylim(0, 35000)
+        plt.grid(True)
+        plt.legend()
+        plt.show()       
+
+
+    def bouyant_force(self, V):
+        """
+        Calculate buoyant force.
+
+        Parameters:
+        - V: volume in m³
+
+        Returns:
+        - buoyant force in Newtons
+        """
+        gas_densities = {
+            "hydrogen": 0.0899,  # kg/m³
+            "helium": 0.1786     # kg/m³
+        }
+        rho_gas = gas_densities[self.gas_type]
+        return (self.rho - rho_gas) * self.g * V
+
+
+
+# Aircraft example
+aircraft = AircraftAerodynamic(weight=4000, altitude=20000)
+# aircraft.plot_feasible_S_V([1, 1.5, 2, 2.5, 3])
+
+# Airship example
+airship = AirshipAerodynamic(weight=4000, altitude=20000, gas_type="hydrogen")
+# airship.plot_feasible_h_V()
+# print("Buoyant Force:", airship.bouyant_force(V=500))
