@@ -102,6 +102,6 @@ class ISA_Calculator:
 if __name__ == "__main__":
     isa = ISA_Calculator(altitude=[20000, 30000, 50000], velocity=25, length=2)
     print(isa)
-
+    
     # Access temperature at 30,000 m:
     print(isa.results[30000]["Temperature [K]"])
