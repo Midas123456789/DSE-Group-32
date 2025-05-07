@@ -4,3 +4,4 @@ class Requirements:
         
         # Set requirements
         self.payload_weight_kg = 100  # kg
+        self.wingspan          = 60   # m

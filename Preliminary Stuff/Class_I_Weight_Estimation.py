@@ -8,7 +8,7 @@ class Class_I_Weight_Estimation():
     including fuel usage estimation.
     """
     def __init__(self, payload_weight_kg=100,
-                    fuel_fraction=0.0, residual_fuel_fraction=0.0 ,empty_weight_fraction=0.5, initial_mtow_guess_kg=1000, iteration_limit=100, tolerance=1.0, 
+                    residual_fuel_fraction=0.0 ,empty_weight_fraction=0.5, initial_mtow_guess_kg=1000, iteration_limit=100, tolerance=0.1, 
                     W1_WTO=1, W2_W1=1, W3_W2=1, W4_W3=1, W5_W4=1, W6_W5=1, W7_W6=1, W8_W7=1, Wfinal_W8=1,
                     n_p=1, c_p=100, g=10, A=1, e=1, C_D_0=0, V_cruise=10):
         
@@ -16,7 +16,7 @@ class Class_I_Weight_Estimation():
         self.payload_weight_kg      = payload_weight_kg  # Weight of payload
         
         # Inputs for first weight estimation
-        self.fuel_fraction          = fuel_fraction          # Fraction of fuel compared to MTOW
+        self.fuel_fraction          = 1 - (W1_WTO * W2_W1 * W3_W2 * W4_W3 * W5_W4 * W6_W5 * W7_W6 * W8_W7 * Wfinal_W8)
         self.residual_fuel_fraction = residual_fuel_fraction # Fraction of fuel weight used for residual
         self.empty_weight_fraction  = empty_weight_fraction  # Fraction of empty weight compared to MTOW
         self.MTOW_kg                = initial_mtow_guess_kg  # Initial guessed MTOW
@@ -60,7 +60,6 @@ class Class_I_Weight_Estimation():
             OEW = self.MTOW_kg * self.empty_weight_fraction
             fuel_weight = self.MTOW_kg * self.fuel_fraction
             new_MTOW = OEW + fuel_weight + self.payload_weight_kg
-            print(new_MTOW)
             
             if abs(new_MTOW - self.MTOW_kg) < self.tolerance:
                 self.converged = True
@@ -125,42 +124,44 @@ class Class_I_Weight_Estimation():
             output.append(f"{key.ljust(max_key_length)} | {value:>13,.3f}")
         
         return "\n".join(output)
-
-    def Generate_Payload_Range_Diagram(self, num_points=50):
-        """
-        Generate a payload-range diagram showing trade-off between payload and fuel capacity under constant MTOW.
-        """
-        self.Determine_Maximum_Lift_Drag_Ratio()  # Ensure L/D is up to date
+    
+    def Plot_Payload_Range_Diagram(self):
+        # Key weights
         MTOW = self.estimated_MTOW
         OEW = self.estimated_OEW
-        
-        max_payload = self.payload_weight_kg
-        max_fuel = MTOW - OEW - 0  # when payload is max
-        min_payload = 0
-        payloads = np.linspace(max_payload, min_payload, num_points)
-        
-        ranges = []
-        for payload in payloads:
-            fuel = MTOW - OEW - payload
-            if fuel <= 0:
-                ranges.append(0)
-                continue
-            W_initial = MTOW
-            W_final = MTOW - fuel
-            R = (self.n_p / (self.c_p * self.g)) * self.L_D * np.log(W_initial / W_final)
-            ranges.append(R / 1000)  # Convert to km
+        Fuel = self.estimated_fuel_weight
+        Payload_max = MTOW - OEW - Fuel
+        MZFW = OEW + Payload_max
 
-        # Plotting
-        plt.figure(figsize=(10, 6))
-        plt.plot(ranges, payloads, label="Payload-Range Curve", color='b')
-        plt.axhline(y=max_payload, linestyle="--", color='g', label="Max Payload")
-        plt.axhline(y=MTOW - OEW, linestyle="--", color='r', label="Max Fuel Capacity")
-        plt.axvline(x=self.Range_Brequet / 1000, linestyle="--", color='purple', label="Max Estimated Range")
-        plt.title("Payload-Range Diagram")
+        # A: Max Payload, Minimum Range (almost zero fuel)
+        range_A = 0
+        payload_A = Payload_max
+
+        # B: Max Payload with available Fuel
+        range_B = self.Range_Brequet
+        payload_B = Payload_max
+
+        # C: Zero Payload, Max Fuel → max range
+        MTOW_no_payload = OEW + Fuel
+        Range_max_fuel_only = (self.n_p / (self.c_p * self.g)) * self.L_D * np.log(MTOW / OEW)
+        range_C = Range_max_fuel_only
+        payload_C = 0
+
+        # Plot
+        plt.figure(figsize=(10,6))
+        plt.plot([range_A, range_B, range_C], [payload_A, payload_B, payload_C], marker='o', label='Payload-Range Curve')
+
+        # Add key weight limits
+        plt.axhline(OEW, color='gray', linestyle='--', label='OEW')
+        plt.axhline(MTOW, color='red', linestyle='--', label='MTOW')
+        plt.axhline(self.results.get("Maximum Landing Weight [kg]", 0), color='purple', linestyle='--', label='MLW')
+        plt.axhline(MZFW, color='green', linestyle='--', label='MZFW')
+
         plt.xlabel("Range [km]")
         plt.ylabel("Payload [kg]")
-        plt.grid(True)
+        plt.title("Payload-Range Diagram")
         plt.legend()
+        plt.grid(True)
         plt.tight_layout()
         plt.show()
 
@@ -172,12 +173,11 @@ if __name__ == "__main__":
     Class_I_Weight_Estimate = Class_I_Weight_Estimation(
         
         # Weight Estimation
-        fuel_fraction          = 0.05,                       # Fraction of fuel compared to MTOW
-        residual_fuel_fraction = 0.02,                       # Fraction of fuel weight used as residuel
+        residual_fuel_fraction = 0.00,                       # Fraction of fuel weight used as residuel
         empty_weight_fraction  = 0.7,                        # Fraction of empty weight compared to MTOW
         initial_mtow_guess_kg  = 8 * req.payload_weight_kg,  # Initial guessed MTOW
         
-        # Fuel Estimation **(Data taken from Image at agriculture)**
+        # Fuel Estimation 
         W1_WTO                 = 0.997,  # Pre-Flight Operations
         W2_W1                  = 0.995,  # Taxiing
         W3_W2                  = 0.996,  # Take-off
@@ -188,7 +188,7 @@ if __name__ == "__main__":
         W8_W7                  = 0.995,  # Taxiing
         Wfinal_W8              = 0.997,  # Post-Flight Operations
         
-        # Range Estimation **(Data taken from Image at agriculture)**
+        # Range Estimation 
         n_p                    = 0.82,    # Propeller efficiency [-]
         c_p                    = 0.3,     # Specific fuel consumption [lbs/hr/hp]
         g                      = 9.80665, # Acceleration due to gravity [m/s^2]
@@ -199,3 +199,4 @@ if __name__ == "__main__":
     )
     
     print(Class_I_Weight_Estimate)
+    #Class_I_Weight_Estimate.Plot_Payload_Range_Diagram()
