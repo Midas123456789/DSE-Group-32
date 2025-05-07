@@ -1,3 +1,7 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from Aerodynamics import Aerodynamic
+
 class AirshipAerodynamic(Aerodynamic):
     def __init__(self, weight, altitude, gas_type):
         """
@@ -47,4 +51,3 @@ class AirshipAerodynamic(Aerodynamic):
 # Airship example
 airship = AirshipAerodynamic(weight=4000, altitude=20000, gas_type="hydrogen")
 airship.plot_feasible_h_V()
-# print("Buoyant Force:", airship.bouyant_force(V=500))
