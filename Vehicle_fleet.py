@@ -1,66 +1,80 @@
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
+from shapely.geometry import Point, box
+from math import sqrt
 
-
-def create_grid_within_eu(gdf, n_cells=10, crs="EPSG:4326"):
-    """Create square grid that covers the EU region"""
-    import shapely
-
-    # Get the bounds of the EU region
+def create_grid_within_eu(gdf, n_cells=10, crs="EPSG:3035"):
     xmin, ymin, xmax, ymax = gdf.total_bounds
-
-    # Calculate the cell size (square grid)
     cell_size = (xmax - xmin) / n_cells
 
-    # Create grid cells
     grid_cells = []
     for x0 in np.arange(xmin, xmax + cell_size, cell_size):
         for y0 in np.arange(ymin, ymax + cell_size, cell_size):
             x1 = x0 + cell_size
             y1 = y0 + cell_size
-            poly = shapely.geometry.box(x0, y0, x1, y1)
-            grid_cells.append(poly)
+            grid_cells.append(box(x0, y0, x1, y1))
 
-    # Create GeoDataFrame for the grid
-    grid = gpd.GeoDataFrame(grid_cells, columns=['geometry'], crs=crs)
-
-    # Perform spatial join to keep only the grid cells that intersect with the EU boundary
-    grid = grid.sjoin(gdf, how='inner').drop_duplicates('geometry')
-
+    grid = gpd.GeoDataFrame(geometry=grid_cells, crs=crs)
+    grid = gpd.sjoin(grid, gdf, how='inner', predicate='intersects')
+    grid = grid.drop(columns=[col for col in ['index_right'] if col in grid.columns])
     return grid
 
-
-# Load shapefile
+# Load EU shapefile and filter
 eu = gpd.read_file("Europe_Communes/COMM_RG_01M_2016_3035.shp")
 eu_members = ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR',
               'DE', 'EL', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL',
               'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE']
-
-# Filter the GeoDataFrame
-eu_euonly = eu[eu['CNTR_CODE'].isin(eu_members)]
-
-# Convert to WGS84 for filtering
-eu_euonly = eu_euonly.to_crs(epsg=4326)
-
-# Explode multipolygons into individual polygons
+eu_euonly = eu[eu['CNTR_CODE'].isin(eu_members)].to_crs(epsg=3035)
 eu_parts = eu_euonly.explode(index_parts=False)
 
-# Filter individual polygons by bounding box (approximate mainland Europe)
+# Filter mainland parts by approximate bounding box
+centroids = eu_parts.geometry.centroid
 mainland_parts = eu_parts[
-    eu_parts.geometry.centroid.y.between(34, 72) &
-    eu_parts.geometry.centroid.x.between(-15, 35)
-    ]
+    (centroids.y.between(900000, 5500000)) &  # y is northing
+    (centroids.x.between(2500000, 7500000))   # x is easting
+]
 
-# Create grid for the mainland EU region
-grid = create_grid_within_eu(mainland_parts, n_cells=200, crs="EPSG:4326")
+# Create grid
+grid = create_grid_within_eu(mainland_parts, n_cells=200, crs="EPSG:3035")
 
-# Plot only the grid in green with proper lat/lon scale
-fig, ax = plt.subplots(figsize=(10, 10))
-grid.plot(ax=ax, edgecolor='black', facecolor='lightgreen', linestyle='--', alpha=0.7)
-plt.title("Mainland EU Grid (Green)")
-ax.set_xlabel("Longitude")
-ax.set_ylabel("Latitude")
-ax.set_aspect('equal')  # Ensures 1:1 scale for lat/lon
+# Radius in meters
+radius_m = 150_000  # 150 km
+
+# Hexagonal packing
+dx = 1.5 * radius_m
+dy = sqrt(3) * radius_m
+
+xmin, ymin, xmax, ymax = grid.total_bounds
+circle_points = []
+x = xmin
+while x < xmax + radius_m:
+    y_offset = 0 if (int((x - xmin) / dx) % 2 == 0) else dy / 2
+    y = ymin + y_offset
+    while y < ymax + radius_m:
+        circle_points.append(Point(x, y))
+        y += dy
+    x += dx
+
+# Create circles
+centers_gdf = gpd.GeoDataFrame(geometry=circle_points, crs="EPSG:3035")
+circles_gdf = centers_gdf.copy()
+circles_gdf["geometry"] = centers_gdf.buffer(radius_m)
+
+# Spatial join to filter only circles that intersect grid
+circles_gdf = gpd.sjoin(circles_gdf, grid, how="inner", predicate="intersects")
+circles_gdf = circles_gdf.drop_duplicates('geometry')
+centers_gdf = circles_gdf.copy()
+centers_gdf["geometry"] = centers_gdf["geometry"].centroid
+
+# Plot
+fig, ax = plt.subplots(figsize=(12, 12))
+grid.plot(ax=ax, edgecolor='black', facecolor='none')
+circles_gdf.plot(ax=ax, edgecolor='blue', facecolor='none', alpha=0.3, label="150 km Circles")
+centers_gdf.plot(ax=ax, color='red', markersize=5, label="Circle Centers")
+plt.title("150 km Circles Covering Mainland EU Grid")
+ax.set_xlabel("Easting (m)")
+ax.set_ylabel("Northing (m)")
+ax.set_aspect('equal')
+plt.legend()
 plt.show()
-
