@@ -1,80 +1,74 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from Aerodynamics import Aerodynamic
+import numpy as np
+from Aerodynamics import *
 
 class AircraftAerodynamic(Aerodynamic):
-    def plot_feasible_S_V(self, CL):
+    
+    def __init__(self, W=0, h=0, V=0, S=0, A=0, e=0, CD0=0, CL=0):
+        super().__init__(weight=W, altitude=h)
+        
+        self.rho = self.altitude_data[self.altitude]["Density [kg/m³]"]
+        self.V = V
+        self.S = S
+        self.A = A 
+        self.e = e 
+        self.CD0 = CD0
+        self.CL = CL
+    
+    def drag_polar(self):
+        self.CD = self.CD0 + ((self.CL)**2)/(np.pi * self.A * self.e)
+        self.D = (1/2) * self.rho * (self.V ** 2) * self.S
+        return self.D
+    
+    def plot_feasible_S_V(self, CL_list):
         """
         Plot feasible wing area (S) vs. velocity (V) for different coefficients of lift.
-
+        
         Parameters:
         - CL: float or list of floats (lift coefficients)
         """
-        rho = self.altitude_data[self.altitude]["Density [kg/m³]"]
+        
+        # Define velocity range
         V = np.linspace(10, 200, 500)
-
-        if not isinstance(CL, list):
-            CL = [CL]
-
+        
+        # Normalize CL input
+        if not isinstance(CL_list, (list, tuple, np.ndarray)):
+            CL_list = [CL_list]
+        
+        # Create plot
         plt.figure(figsize=(10, 6))
-        for cl in CL:
-            S = (2 * self.weight) / (rho * V**2 * cl)
+        
+        for cl in CL_list:
+            if cl < 0:
+                raise ValueError(f"Lift coefficient must be bigger than 0. Got {cl}.")
+            S = (2 * self.weight) / (self.rho * V**2 * cl)
             plt.plot(V, S, label=f'CL = {cl}')
             plt.fill_between(V, 0, S, alpha=0.1)
-
+        
+        # Add labels and formatting
         plt.xlabel('Velocity (m/s)')
         plt.ylabel('Wing Area (m²)')
-        plt.title(f'Feasible Wing Area (S) vs Velocity (V)\nAltitude: {self.altitude} m, Weight: {self.weight} N')
-        plt.xlim(0, 100)
+        plt.title(f'Feasible Wing Area vs Velocity\nAltitude: {self.altitude} m | Weight: {self.weight} N')
+        plt.xlim(10, 200)
+        plt.ylim(bottom=0)
         plt.grid(True)
         plt.legend()
+        plt.tight_layout()
         plt.show()
 
 
-
-
-
-    def plot_feasible_A_LD(self, CL):
-        """
-        Plot feasible wing area (S) vs. velocity (V) for different coefficients of lift.
-
-        Parameters:
-        - CL: float or list of floats (lift coefficients)
-        """
-
-
-        if not isinstance(CL, list):
-            CL = [CL]
-
-        # input A, e, CL, CD0, S
-
-        A = np.linspace(10, 100, 500)
-
-    def WP_WS_Diagram(self, Vs= 10, CL_max = 2, CL_TO = 2.4, TOP = 500, sigma = 1):
-        """
-        Wing loading diagram
-        """
-
-        WS_range = np.linspace(1, 10000, 500)
-
-        WSmax = 0.5 * self.altitude_data[self.altitude]["Density [kg/m³]"] * Vs**2 * CL_max
-
-        PW_TO = TOP/(WS_range * CL_TO * sigma)
-
-        plt.figure(figsize=(10, 6))
-        plt.axvline(WSmax, color='red', linestyle='--', label='Max Wing Loading')
-        plt.plot(WS_range, PW_TO, label='Power-to-Weight Ratio (P/W)')
-        plt.fill_between(WS_range, 0, PW_TO, alpha=0.1)
-        plt.xlabel('Wing Loading (W/S)')
-        plt.xlim(0, 100)
-        plt.ylabel('(P/W)')
-        plt.show()
-
-
-
-
-
-# Aircraft example
-aircraft = AircraftAerodynamic(weight=4000, altitude=20000)
-# aircraft.plot_feasible_S_V([1, 1.5, 2, 2.5, 3])
-aircraft.WP_WS_Diagram()
+# Example Usage
+if __name__ == "__main__":
+    aircraft = AircraftAerodynamic(
+        W=4000, 
+        h=20000, 
+        V=25, 
+        S=10, 
+        A=12, 
+        e=0.9, 
+        CD0=0,
+        CL=2
+    )
+    
+    aircraft.plot_feasible_S_V(CL_list=[0.5, 1, 1.5, 2, 2.5, 3])
+    print(aircraft.drag_polar())
