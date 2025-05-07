@@ -61,9 +61,33 @@ centers_gdf = gpd.GeoDataFrame(geometry=circle_points, crs="EPSG:3035")
 circles_gdf = centers_gdf.copy()
 circles_gdf["geometry"] = centers_gdf.buffer(radius_m)
 
-# Spatial join to filter only circles that intersect grid
+# Spatial join to filter only circles that intersect the grid
 circles_gdf = gpd.sjoin(circles_gdf, grid, how="inner", predicate="intersects")
 circles_gdf = circles_gdf.drop_duplicates('geometry')
+
+
+# Assign grid cells to each circle
+circle_grid_map = gpd.sjoin(circles_gdf[['geometry']], grid[['geometry']], how="left", predicate="intersects")
+circle_grid_map['circle_id'] = circle_grid_map.index
+grid_assignments = circle_grid_map.groupby('circle_id').apply(lambda df: set(df.index_right)).to_dict()
+
+# Mark redundant circles
+to_remove = set()
+circle_ids = list(grid_assignments.keys())
+
+for i in range(len(circle_ids)):
+    for j in range(len(circle_ids)):
+        if i == j or circle_ids[i] in to_remove or circle_ids[j] in to_remove:
+            continue
+        a, b = circle_ids[i], circle_ids[j]
+        set_a, set_b = grid_assignments[a], grid_assignments[b]
+        if set_a <= set_b:
+            to_remove.add(a if len(set_a) <= len(set_b) else b)
+        elif set_b <= set_a:
+            to_remove.add(b if len(set_b) <= len(set_a) else a)
+
+# Filter out redundant circles
+circles_gdf = circles_gdf.drop(index=to_remove)
 centers_gdf = circles_gdf.copy()
 centers_gdf["geometry"] = centers_gdf["geometry"].centroid
 
@@ -82,7 +106,7 @@ fig, ax = plt.subplots(figsize=(12, 12))
 grid.plot(ax=ax, edgecolor='black', facecolor='none')
 circles_gdf.plot(ax=ax, edgecolor='blue', facecolor='none', alpha=0.3, label="150 km Circles")
 centers_gdf.plot(ax=ax, color='red', markersize=5, label="Circle Centers")
-plt.title("150 km Circles Covering Mainland EU Grid")
+plt.title("150 km Circles Covering Mainland EU Grid (Redundant Removed)")
 ax.set_xlabel("Longitude")
 ax.set_ylabel("Latitude")
 ax.set_aspect('equal')
