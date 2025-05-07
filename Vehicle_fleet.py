@@ -67,12 +67,15 @@ circles_gdf = circles_gdf.drop_duplicates('geometry')
 centers_gdf = circles_gdf.copy()
 centers_gdf["geometry"] = centers_gdf["geometry"].centroid
 
-centers_gdf_wgs84 = centers_gdf.to_crs(epsg=4326)
+# Transform CRS to WGS 84 (latitude/longitude)
+centers_gdf = centers_gdf.to_crs(epsg=4326)
+circles_gdf = circles_gdf.to_crs(epsg=4326)
+grid = grid.to_crs(epsg=4326)
 
-# Print longitude and latitude of each center
-for idx, row in centers_gdf_wgs84.iterrows():
-    lon, lat = row.geometry.x, row.geometry.y
-    print(f"Longitude: {lon:.6f}, Latitude: {lat:.6f}")
+# Print number of circles and their coordinates
+print(f"Number of circles: {len(centers_gdf)}")
+for i, row in centers_gdf.iterrows():
+    print(f"Circle {i+1}: Latitude = {row['geometry'].y}, Longitude = {row['geometry'].x}")
 
 # Plot
 fig, ax = plt.subplots(figsize=(12, 12))
@@ -80,8 +83,8 @@ grid.plot(ax=ax, edgecolor='black', facecolor='none')
 circles_gdf.plot(ax=ax, edgecolor='blue', facecolor='none', alpha=0.3, label="150 km Circles")
 centers_gdf.plot(ax=ax, color='red', markersize=5, label="Circle Centers")
 plt.title("150 km Circles Covering Mainland EU Grid")
-ax.set_xlabel("Easting (m)")
-ax.set_ylabel("Northing (m)")
+ax.set_xlabel("Longitude")
+ax.set_ylabel("Latitude")
 ax.set_aspect('equal')
 plt.legend()
 plt.show()
