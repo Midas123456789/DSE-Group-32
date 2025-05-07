@@ -4,7 +4,7 @@ from aerosandbox import cas
 from numpy import pi
 from aerosandbox import Atmosphere
 import matplotlib.pyplot as plt
-from scipy.signal import savgol_filter
+
 # Constants
 altitude = 20000  # meters
 D = 400           # Thrust [N]
@@ -21,16 +21,17 @@ rpm_list = []
 pitch_list = []
 torque_list = []
 power_list = []
+rpm_torque_ratio_list = []
 
 # Loop over upper bound values of r
 for r_max in r_max_vals:
     opti = asb.Opti()
 
     # Optimization variables
-    r = opti.variable(init_guess=1.2, lower_bound=0.5, upper_bound=r_max)  # m
-    RPM = opti.variable(init_guess=2000, lower_bound=500, upper_bound=20000)  # RPM
+    r = opti.variable(init_guess=1, lower_bound=0.5, upper_bound=r_max)  # m
+    RPM = opti.variable(init_guess=600, lower_bound=500, upper_bound=20000)  # RPM
 
-    # Derived quantities4
+    # Derived quantities
     Adisk = pi * r**2
     T = D
     power = 0.5 * rho * T * v_o * (cas.sqrt(T / (0.5 * rho * Adisk * v_o**2) + 1) + 1)
@@ -50,14 +51,30 @@ for r_max in r_max_vals:
     omega = 2 * pi * RPM_opt / 60
     torque_opt = P_opt / omega
 
-    # Store
+    # Store values
     r_opt_list.append(r_opt)
     rpm_list.append(RPM_opt)
     pitch_list.append(pitch_opt)
     torque_list.append(torque_opt)
     power_list.append(P_opt)
 
-# Plotting
+    # Calculate RPM/Torque ratio and store it
+    rpm_torque_ratio = RPM_opt / torque_opt
+    rpm_torque_ratio_list.append(rpm_torque_ratio)
+
+# Find the index where the RPM/Torque ratio is lowest
+min_ratio_index = np.argmin(rpm_torque_ratio_list)
+r_min_ratio = r_max_vals[min_ratio_index]
+min_ratio_value = rpm_torque_ratio_list[min_ratio_index]
+RPM_at_min_ratio = rpm_list[min_ratio_index]
+torque_at_min_ratio = torque_list[min_ratio_index]
+
+# Print the results for the lowest ratio
+print(f"Minimum RPM/Torque ratio occurs at radius: {r_min_ratio} m with a ratio of {min_ratio_value}")
+print(f"At this radius, the optimized RPM is: {RPM_at_min_ratio} RPM")
+print(f"At this radius, the optimized Torque is: {torque_at_min_ratio} Nm")
+
+# Plotting without Savitzky-Golay filter
 plt.figure(figsize=(12, 8))
 
 plt.subplot(3, 1, 1)
