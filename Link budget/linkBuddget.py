@@ -68,21 +68,35 @@ def power_vs_distance(distance,frequency, diameter_antenna,snr_db,bandwidth=20e6
     l_misc = 2.6 # Miscellaneous losses (e.g., connectors, cables, atmosphere etc.) rnadom web shit
     rx_gain_db = 0 # Receiver gain in dB (assumed to be 0 for simplicity)
    
-    tx_gain_db = 10 * np.log10(4*np.pi*0.75*np.pi*(diameter_antenna/2)**2 *(frequency/c)**2)
+    tx_gain_db = 10 * np.log10(4*np.pi*0.5*np.pi*(diameter_antenna/2)**2 *(frequency/c)**2)
+    #tx_gain_db = 10 * np.log10(4*np.pi*64*0.5)
    
     P_rx_without_tx=tx_gain_db+rx_gain_db - l_fs_db-l_misc
     noise = 10* np.log10(k*(noise_figure-1)*T*bandwidth) # Noise power in dBm
+    #noise += -174+ np.log10(bandwidth)+noise_figure_db # general noise
     Ptx=noise + snr_db - P_rx_without_tx
 
     #convert dbm to linear scale
     Ptx = 10**((Ptx)/10) # Convert dBm to linear scale
-   
+    #print(f'Ptx: {Ptx} dBm \ntx_gain_db: {tx_gain_db} dB \nrx_gain_db: {rx_gain_db} dB \nFree space loss: {l_fs_db} dB \nMiscellaneous losses: {l_misc} dB \nNoise figure: {noise_figure_db} dB \nNoise power: {noise} dBm \nSNR: {snr_db} dB \nDistance: {distance} m \nFrequency: {frequency} Hz \nAntenna diameter: {diameter_antenna} m')
     
 
     return Ptx
+def bitrate_to_snr(bitrate, bandwidth):
+    # Shannon's capacity formula: C = B * log2(1 + SNR)
+    # Rearranging gives: SNR = 2^(C/B) - 1
+    snr = 2**(bitrate / bandwidth) - 1
+    return snr
+def distance_to_radius(distance,height):
+    # Convert distance in km to radius in km
+    return distance**2 - height**2
+
+#power_vs_distance(1000, 1.6e9, 0.02,acceptable_snr_db, bandwidth=20e6, noise_figure_db=5) # Example usage
+
 #plot power vs distance
 distances = np.linspace(1, 100, 100)  # Distance from 1 km to 100 km
-acceptable_snr_db = 10  # Acceptable SNR in dB
+acceptable_snr_db = 10*np.log10(bitrate_to_snr(100e6,20e6))  # Acceptable SNR in dB
+print(f'acceptable_snr_db: {acceptable_snr_db} dB')
 antenna_diameter = 3  # Antenna diameter in meters
 distances*= 1000
 powers= [power_vs_distance(distance, 1.6e9, antenna_diameter, acceptable_snr_db, bandwidth=20e6, noise_figure_db=5) for distance in distances]
