@@ -4,62 +4,17 @@ import matplotlib.pyplot as plt
 c = 3e8
 k = 1.38e-23  # Boltzmann constant in J/K
 T = 290  # Noise temperature in Kelvin
-height = 20e3  # Height of HAPS in meters
-'''
-def calculate_link_budget(frequency_mhz, distance_km, tx_power_dbm, tx_gain_db, rx_gain_db, bandwidth_mhz, noise_figure_db):
-    # Constants
-      # Speed of light in m/s
-    
+height = 20e3  # Height of HAPS in meters. the idea is that this is an input parameter
 
-    # Convert frequency to Hz and distance to meters
-    frequency_hz = frequency_mhz * 1e6
-    distance_m = distance_km * 1e3
-
-    # Free-space path loss (FSPL) in dB
-    fspl_db = 20 * math.log10(distance_m) + 20 * math.log10(frequency_hz) - 147.55
-
-    # Noise power in dBm
-    noise_power_dbm = 10 * math.log10(k * T * bandwidth_mhz * 1e6) + 30
-
-    # Received power in dBm
-    rx_power_dbm = tx_power_dbm + tx_gain_db + rx_gain_db - fspl_db
-
-    # Signal-to-noise ratio (SNR) in dB
-    snr_db = rx_power_dbm - noise_power_dbm - noise_figure_db
-
-    return {
-        "FSPL (dB)": fspl_db,
-        "Noise Power (dBm)": noise_power_dbm,
-        "Received Power (dBm)": rx_power_dbm,
-        "SNR (dB)": snr_db
-    }
-
-#for the haps to cell
-# Example parameters for HAPS 5G link
-frequency_mhz = 1.6  # 1.6GHz
-distance_km = 20  # 20 km
-tx_power_dbm = 30  # 1 W
-tx_gain_db = 15  # 15 dBi
-rx_gain_db = 0  # 15 dBi
-bandwidth_mhz = 20  # 20 MHz
-noise_figure_db = 5  # 5 dB
-
-# Calculate link budget
-link_budget = calculate_link_budget(frequency_mhz, distance_km, tx_power_dbm, tx_gain_db, rx_gain_db, bandwidth_mhz, noise_figure_db)
-
-# Print results
-print("Link Budget Results:")
-for key, value in link_budget.items():
-    print(f"{key}: {value:.2f} dB")
-
-'''
-#minimize power for given distance
+#minimize power for given distance?
 
 
-#maximize ditance for max Power
+#maximize distance for a set max Power?
+#in a way done
 
 
-#maximize snr (capacity) for given distance and X power
+
+#maximize snr (capacity) for given distance and X power?
 
 
 #graph distancce vs power for  given snr and bandwith
@@ -74,7 +29,7 @@ def power_vs_distance(distance,frequency, diameter_antenna,snr_db,bandwidth=20e6
    
     P_rx_without_tx=tx_gain_db+rx_gain_db - l_fs_db-l_misc
     noise = 10* np.log10(k*(noise_figure-1)*T*bandwidth) # Noise power in dBm
-    #noise += -174+ np.log10(bandwidth)+noise_figure_db # general noise
+    #noise += -174+ np.log10(bandwidth)+noise_figure_db # general noise in the region and from some paper no clue if correct, though something should be included
     Ptx=noise + snr_db - P_rx_without_tx
 
     #convert dbm to linear scale
@@ -83,24 +38,7 @@ def power_vs_distance(distance,frequency, diameter_antenna,snr_db,bandwidth=20e6
     
 
     return Ptx
-'''
-def power_to_distance(tx_power,frequency, diameter_antenna,snr_db,bandwidth=20e6, noise_figure_db=5):
-    # Calculate the distance based on the given parameters
-    noise_figure = 10**(noise_figure_db/10)  # Convert dB to linear scale
-    #l_fs_db = 10 * np.log10((4 * np.pi * frequency / c)**2)  # Free space loss in dB
-    l_misc = 2.6  # Miscellaneous losses (e.g., connectors, cables, atmosphere etc.)
-    rx_gain_db = 0  # Receiver gain in dB (assumed to be 0 for simplicity)
-    
-    tx_gain_db = 10 * np.log10(4*np.pi*0.5*np.pi*(diameter_antenna/2)**2 *(frequency/c)**2)
-    
-    P_rx_without_fs = tx_gain_db + rx_gain_db - l_fs_db - l_misc
-    noise = 10 * np.log10(k * (noise_figure - 1) * T * bandwidth)  # Noise power in dBm
-    
-    # Calculate the distance based on the given parameters
-    distance = c / (4 * np.pi * frequency) * 10**((tx_power + P_rx_without_tx - snr_db - noise) / 20)
-    
-    return distance
-'''
+
 def bitrate_to_snr(bitrate, bandwidth):
     # Shannon's capacity formula: C = B * log2(1 + SNR)
     # Rearranging gives: SNR = 2^(C/B) - 1
@@ -110,38 +48,35 @@ def distance_to_radius(distance):
     # Convert distance in km to radius in km
     return distance**2 - height**2
 
-#power_vs_distance(1000, 1.6e9, 0.02,acceptable_snr_db, bandwidth=20e6, noise_figure_db=5) # Example usage
 
-
-
-#minimum_bitrate = 100e6  # Minimum bitrate in bps
 total_haps_bitrate = 100e9  # Total bitrate in bps
 n_beams = 64  # Number of beams
 P_max = 5e3
 
 
-#assume each beam has the same power and bandwidth
-
-#beamwidth  = np.pi/n_beams # Beamwidth in radians
-#beam configuration
 
 
 
-bandwidth = 100e6  # Bandwidth in Hz
-#plot power vs distance
-#distances = np.linspace(1, 100, 100)  # Distance from 1 km to 100 km
+bandwidth = 100e6  # Bandwidth in Hz; from wikipedia (however not non-teresterial stuff)
+
+#assume worth case and 1/2 of the total bitrate is used in total (between all beams)
 acceptable_snr_db = 10*np.log10(bitrate_to_snr(0.5*total_haps_bitrate/n_beams,bandwidth))  # Acceptable SNR in dB
-
-#print(f'acceptable_snr_db: {acceptable_snr_db} dB')
 antenna_diameter = 3  # Antenna diameter in meters
-#distances*= 1000
-#powers= [power_vs_distance(distance, 3.7e9, antenna_diameter, acceptable_snr_db, bandwidth=20e6, noise_figure_db=5) for distance in distances]
+
 #find at which distance the power is equal to P_max/n_beams using root finding
 from scipy.optimize import fsolve
 def equation_to_solve(distance):
     return power_vs_distance(distance, 3.7e9, antenna_diameter, acceptable_snr_db, bandwidth=bandwidth, noise_figure_db=5) - P_max/n_beams
 print(f' the solution is {fsolve(equation_to_solve, 1000)} m') #initial guess of 1000m
 
+
+
+
+# Plotting the graph of power vs distance
+
+#distances = np.linspace(1, 100, 100)  # Distance from 1 km to 100 km
+#distances*= 1000
+#powers= [power_vs_distance(distance, 3.7e9, antenna_diameter, acceptable_snr_db, bandwidth=20e6, noise_figure_db=5) for distance in distances]
 '''
 plt.plot(distances/1000, powers)
 #do a line at 10kw
