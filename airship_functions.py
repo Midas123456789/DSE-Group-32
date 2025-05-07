@@ -160,9 +160,64 @@ def calculate_hull_fabric_load(FS, P_int, height):
     """
     height_inches = height * 12  # Convert height from ft to inches
     # NOTE 1 ft = 12 inches
-    q_hull = FS * P_int * height_inches  # hull fabric load in psi
+    q_hull = FS * P_int * (height_inches/2)  # hull fabric load in psi
 
     return q_hull
 
+def calculate_hull_fabric_density(material, q_hull):
+    """
+    Calculate the hull fabric density based on the material type and hull fabric load.
+    Inputs: material (str): material type of the hull fabric
+            q_hull (float): hull fabric load in lb/in
+    Outputs: w_hull (float): hull fabric density in oz/yd²
+    """
+    # Material coefficients a and b for linear regression
+    material_strengths = {
+        'Polyester (weave)': {'a': 0.0453, 'b': 1.962},
+        'Vectran (weave)': {'a': 0.0141, 'b': 1.882},
+        'Vectran (laminate)': {'a': 0.0085, 'b': 1.365},
+        'Dyneema (laminate)': {'a': 0.0063, 'b': 0.889}
+    }
+
+    # Linear relationship calculation using coefficients a and b
+    a = material_strengths[material]['a']
+    b = material_strengths[material]['b']
+    w_hull = a * q_hull + b
+
+    return w_hull
 
 
+def calculate_weight_envelope(w_hull, S_wet):
+    """
+    Calculate the weight of the envelope based on the hull fabric density and wetted area.
+    Inputs: w_hull (float): hull fabric density in oz/yd²
+            S_wet (float): wetted area in ft²
+    Outputs: W_envelope (float): weight of the envelope in lbf
+    """
+    # Converting oz/yd² to lbf/ft²
+    # NOTE 16 oz = 1 lb, 1 yd² = 9 ft², 1.2 = manufacturing factor, 1.26 = attachements factor
+    W_envelope = w_hull * S_wet * 1.2 * 1.26 / (16 * 9)  # conversion to lbf/ft²
+
+    return W_envelope
+
+def calculate_septum_density(material, q_hull):
+    """
+    Calculate the septum fabric density based on the material type and hull fabric load.
+    Inputs: material (str): material type of the septum fabric
+            q_hull (float): hull fabric load in lb/in
+    Outputs: w_septum (float): septum fabric density in oz/yd²
+    """
+    # Material coefficients a and b for linear regression
+    material_strengths = {
+        'Polyester (weave)': {'a': 0.0453, 'b': 1.962},
+        'Vectran (weave)': {'a': 0.0141, 'b': 1.882},
+        'Vectran (laminate)': {'a': 0.0085, 'b': 1.365},
+        'Dyneema (laminate)': {'a': 0.0063, 'b': 0.889}
+    }
+
+    # Linear relationship calculation using coefficients a and b with safety factor
+    a = material_strengths[material]['a']
+    b = material_strengths[material]['b']
+    w_septum = a * (1.5 * q_hull) + b
+
+    return w_septum

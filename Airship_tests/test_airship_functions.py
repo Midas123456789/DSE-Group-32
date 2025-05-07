@@ -112,3 +112,50 @@ def test_calculate_internal_presssure():
     expected_internal_pressure = 0.092  # expected internal pressure in psi
     assert round(calculate_internal_pressure(qmax, height), 3) == expected_internal_pressure, f"Expected {expected_internal_pressure}, got {calculate_internal_pressure(qmax, height)}"
 
+def test_calculate_hull_fabric_load():
+    """
+    Test the hull_fabirc_load function.
+    """
+    # Test case 1: Basic test case
+    FS = 4 # factor of safety [dimensionaless]
+    P_int = 0.092  # internal pressure psi
+    height = 78.2 # height of the airship in ft
+    expected_hull_fabric_load = 173  # expected internal pressure in psi
+    assert round(calculate_hull_fabric_load(FS, P_int, height), 0) == expected_hull_fabric_load, f"Expected {expected_hull_fabric_load}, got {calculate_hull_fabric_load(FS, P_int, height)}"
+
+
+def test_calculate_hull_fabric_density():
+    """
+    Test the calculate_hull_fabric_density function.
+    """
+    # Test case 1: Basic test case
+    material = "Polyester (weave)"  # material type
+    q_hull = 173  # hull fabric load in lb/in
+    expected_hull_fabric_density = 9.80  # expected hull fabric density in oz/yd², differs from the book (states 9.75)
+    assert round(calculate_hull_fabric_density(material, q_hull),
+                 2) == expected_hull_fabric_density, f"Expected {expected_hull_fabric_density}, got {calculate_hull_fabric_density(material, q_hull)}"
+
+
+def test_calculate_weight_envelope():
+    """
+    Test the calculate_weight_envelope function.
+    """
+    # Test case 1: Basic test case
+    w_hull = 9.75  # hull fabric density in oz/yd²
+    S_wet = 61631  # wetted area in ft²
+    expected_weight = 6309 # expected weight of envelope in lb, differs from the book (states 6311)
+
+    assert round(calculate_weight_envelope(w_hull, S_wet),
+                 0) == expected_weight, f"Expected {expected_weight}, got {calculate_weight_envelope(w_hull, S_wet)}"
+
+
+def test_calculate_septum_density():
+    """
+    Test the calculate_septum_density function.
+    """
+    # Test case 1: Basic test case
+    material = "Polyester (weave)"  # material type
+    q_hull = 173  # septum fabric load in lb/in
+    expected_septum_density = 13.72  # expected septum density in oz/yd²
+    assert round(calculate_septum_density(material, q_hull),
+                 2) == expected_septum_density, f"Expected {expected_septum_density}, got {calculate_septum_density(material, q_hull)}"
