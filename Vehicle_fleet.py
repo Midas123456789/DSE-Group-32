@@ -4,17 +4,23 @@ import matplotlib.pyplot as plt
 # Load shapefile
 eu = gpd.read_file("Europe_map/CNTR_BN_01M_2024_3035.shp")
 
-# Optional: simplify by selecting only EU countries
-# If 'CNTR_CODE' or 'NAME_ENGL' is in the dataframe, you can filter here
-# For now, just plot everything
-
-# Plot
-# Keep only countries where EU_FLAG is '1'
+# Filter only EU member countries
 eu_euonly = eu[eu['EU_FLAG'] == 'T']
 
-# Plot the filtered EU countries
-eu_euonly.plot(figsize=(10, 10), color='lightgreen', edgecolor='black')
+# Convert to WGS84 for filtering
+eu_euonly = eu_euonly.to_crs(epsg=4326)
 
-plt.title("Europe (Eurostat shapefile)")
+# Explode multipolygons into individual polygons
+eu_parts = eu_euonly.explode(index_parts=False)
+
+# Filter individual polygons by bounding box (approximate mainland Europe)
+mainland_parts = eu_parts[
+    eu_parts.geometry.centroid.y.between(34, 72) &
+    eu_parts.geometry.centroid.x.between(-15, 35)
+]
+
+
+# Plot result
+mainland_parts.plot(figsize=(10, 10), color='lightblue', edgecolor='black')
+plt.title("Mainland EU (exploded and filtered)")
 plt.show()
-print(eu.columns)
