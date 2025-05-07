@@ -14,10 +14,10 @@ class Aerodynamic:
         self.altitude = altitude
 
         self.isa = ISA_Calculator(altitude)
-        self.rho = self.isa.results["Density [kg/m³]"]
-        self.g = self.isa.results["Gravity [m/s²]"]
-        self.T = self.isa.results["Temperature [K]"]
-        self.P = self.isa.results["Pressure [Pa]"]
+        self.rho = self.isa.results[altitude]["Density [kg/m³]"]
+        self.g = self.isa.results[altitude]["Gravity [m/s²]"]
+        self.T = self.isa.results[altitude]["Temperature [K]"]
+        self.P = self.isa.results[altitude]["Pressure [Pa]"]
 
 class AircraftAerodynamic(Aerodynamic):
     def plot_feasible_S_V(self, CL):
@@ -47,6 +47,24 @@ class AircraftAerodynamic(Aerodynamic):
         plt.legend()
         plt.show()
 
+    def estimate_drag(self, S, V, CD0, k):
+        """
+        Estimate drag using the drag equation.
+
+        Parameters:
+        - S: wing area in m²
+        - V: velocity in m/s
+        - CD0: zero-lift drag coefficient
+        - k: induced drag factor
+
+        Returns:
+        - Drag force in Newtons
+        """
+        rho = self.rho
+        q = 0.5 * rho * V**2
+        CD = CD0 + k * (self.weight / (0.5 * rho * V**2 * S))**2
+        return q * S * CD
+
 class AirshipAerodynamic(Aerodynamic):
     def __init__(self, weight, altitude, gas_type):
         """
@@ -69,22 +87,18 @@ class AirshipAerodynamic(Aerodynamic):
         Parameters:
         - None
         """
-
-        h = np.linspace(1000, 25000, 500)  # Volume in m³
-        rho = []
-        for i in range(len(h)):
-            self.isa.define_properties(h[i])
-            rho.append(self.isa.results["Density [kg/m³]"])
-
-        rho = np.array(rho)
+        
         rho_gas = {
             "hydrogen": 0.0899,  # kg/m³
             "helium": 0.1786     # kg/m³
         }[self.gas_type]
-        print(h)
 
-        V = (self.weight / (rho - rho_gas))  # Convert to m³
-        print(V)
+        h = list(np.linspace(1000, 25000, 500))  # Volume in m³
+        isa = ISA_Calculator(h)
+        V = []
+        for i in h:
+            V.append(self.weight / (isa.results[i]["Density [kg/m³]"] - rho_gas))  # Convert to m³
+
         plt.figure(figsize=(10, 6))
         plt.plot(h, V, label=f'Gas Type: {self.gas_type.capitalize()}')
         # plt.fill_between(h, 0, V, alpha=0.1)
@@ -124,5 +138,5 @@ aircraft = AircraftAerodynamic(weight=4000, altitude=20000)
 
 # Airship example
 airship = AirshipAerodynamic(weight=4000, altitude=20000, gas_type="hydrogen")
-# airship.plot_feasible_h_V()
+airship.plot_feasible_h_V()
 # print("Buoyant Force:", airship.bouyant_force(V=500))
