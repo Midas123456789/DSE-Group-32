@@ -15,3 +15,6 @@ class Aerodynamic:
         self.altitude_range = np.linspace(0, 30000, 100).tolist()
         self.isa = ISA_Calculator(self.altitude_range)
         self.altitude_data = self.isa.results
+
+        self.R = 287.05287  # J/(kg·K)
+        
