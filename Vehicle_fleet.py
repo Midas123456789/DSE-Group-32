@@ -2,6 +2,7 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import os
 from shapely.geometry import Point, box
 from math import sqrt
 
@@ -20,7 +21,8 @@ def load_mainland_eu(filepath: str, crs="EPSG:3035"):
     ]
     return mainland
 
-def create_grid_within_eu(gdf, n_cells=10, crs="EPSG:3035"):
+
+def create_grid(gdf, n_cells=10, crs="EPSG:3035"):
     xmin, ymin, xmax, ymax = gdf.total_bounds
     cell_size = (xmax - xmin) / n_cells
     grid_cells = [
@@ -33,7 +35,8 @@ def create_grid_within_eu(gdf, n_cells=10, crs="EPSG:3035"):
     grid = grid.drop(columns=[col for col in ['index_right'] if col in grid.columns])
     return grid
 
-def generate_hexagonal_centers(bounds, radius):
+
+def compute_circle_centers(bounds, radius):
     xmin, ymin, xmax, ymax = bounds
     dx = 1.5 * radius
     dy = sqrt(3) * radius
@@ -48,18 +51,21 @@ def generate_hexagonal_centers(bounds, radius):
         x += dx
     return points
 
-def create_circles(points, radius, crs="EPSG:3035"):
+
+def create_circle_geometries(points, radius, crs="EPSG:3035"):
     gdf = gpd.GeoDataFrame(geometry=points, crs=crs)
     circles = gdf.copy()
     circles["geometry"] = gdf.buffer(radius)
     return gdf, circles
 
-def filter_circles_by_grid(circles, grid):
+
+def filter_circles(circles, grid):
     circles = gpd.sjoin(circles, grid, how="inner", predicate="intersects")
     circles = circles.drop_duplicates('geometry')
     return circles
 
-def remove_redundant_circles(circles, grid):
+
+def remove_redundancies(circles, grid):
     circle_grid_map = gpd.sjoin(circles[['geometry']], grid[['geometry']], how="left", predicate="intersects")
     circle_grid_map['circle_id'] = circle_grid_map.index
     grid_assignments = circle_grid_map.groupby('circle_id').apply(lambda df: set(df.index_right)).to_dict()
@@ -78,10 +84,12 @@ def remove_redundant_circles(circles, grid):
                 to_remove.add(b if len(set_b) <= len(set_a) else a)
     return circles.drop(index=to_remove)
 
-def transform_to_wgs84(*gdfs):
+
+def to_wgs84(*gdfs):
     return [gdf.to_crs(epsg=4326) for gdf in gdfs]
 
-def plot_circles(grid, circles, centers):
+
+def plot_all(grid, circles, centers):
     fig, ax = plt.subplots(figsize=(12, 12))
     grid.plot(ax=ax, edgecolor='black', facecolor='none')
     circles.plot(ax=ax, edgecolor='blue', facecolor='none', alpha=0.3, label="150 km Circles")
@@ -94,41 +102,62 @@ def plot_circles(grid, circles, centers):
     plt.show()
 
 
-def main(shapefile_path, n_cells=200, radius_m=150_000):
+def generate_coverage_data(shapefile_path, n_cells=200, radius_m=150_000):
     mainland = load_mainland_eu(shapefile_path)
-    grid = create_grid_within_eu(mainland, n_cells=n_cells)
-    circle_centers = generate_hexagonal_centers(grid.total_bounds, radius_m)
-    centers_gdf, circles_gdf = create_circles(circle_centers, radius_m)
-    circles_gdf = filter_circles_by_grid(circles_gdf, grid)
-    circles_gdf = remove_redundant_circles(circles_gdf, grid)
+    grid = create_grid(mainland, n_cells=n_cells)
+    circle_points = compute_circle_centers(grid.total_bounds, radius_m)
+    centers_gdf, circles_gdf = create_circle_geometries(circle_points, radius_m)
+    circles_gdf = filter_circles(circles_gdf, grid)
+    circles_gdf = remove_redundancies(circles_gdf, grid)
+
     centers_gdf = circles_gdf.copy()
     centers_gdf["geometry"] = centers_gdf["geometry"].centroid
-    centers_gdf, circles_gdf, grid = transform_to_wgs84(centers_gdf, circles_gdf, grid)
 
-    plot_circles(grid, circles_gdf, centers_gdf)
+    centers_gdf, circles_gdf, grid = to_wgs84(centers_gdf, circles_gdf, grid)
+    return grid, circles_gdf, centers_gdf
 
-    return centers_gdf
-
-def export_circle_coordinates(centers_gdf, output_path=None):
+def export_coverage_data_shp(grid, circles_gdf, centers_gdf, folder_name="coverage_shapefiles"):
     """
-    Converts circle center geometries to a DataFrame with lat/lon and optionally saves to CSV.
+    Saves shapefiles of grid, circles, and centers into a folder in the main directory.
 
     Parameters:
-        centers_gdf (GeoDataFrame): Circle centers in EPSG:4326.
-        output_path (str, optional): If provided, saves the DataFrame to this CSV path.
-
-    Returns:
-        pd.DataFrame: DataFrame with circle center coordinates.
+        grid (GeoDataFrame): Grid polygons.
+        circles_gdf (GeoDataFrame): Coverage circles.
+        centers_gdf (GeoDataFrame): Circle centers.
+        folder_name (str): Name of the output folder in the main directory.
     """
-    coords = centers_gdf.geometry.apply(lambda pt: (pt.y, pt.x))  # (lat, lon)
-    df_locations = pd.DataFrame(coords.tolist(), columns=["latitude", "longitude"])
-    df_locations.index.name = "circle_id"
+    main_dir = os.getcwd()
+    output_dir = os.path.join(main_dir, folder_name)
+    os.makedirs(output_dir, exist_ok=True)
 
-    if output_path:
-        df_locations.to_csv(output_path)
+    grid.to_file(os.path.join(output_dir, "grid.shp"))
+    circles_gdf.to_file(os.path.join(output_dir, "circles.shp"))
+    centers_gdf.to_file(os.path.join(output_dir, "centers.shp"))
 
-    return df_locations
+    print(f"Exported shapefiles to: {output_dir}")
 
-# Example usage:
-centers_gdf = main("Europe_Communes/COMM_RG_01M_2016_3035.shp")
-export_circle_coordinates(centers_gdf, "circle_centers.csv")
+
+def plot_coverage(folder_name="coverage_shapefiles"):
+    """
+    Loads exported shapefiles and plots grid, circles, and centers.
+
+    Parameters:
+        folder_name (str): Folder containing grid.shp, circles.shp, and centers.shp.
+    """
+    main_dir = os.getcwd()
+    shp_dir = os.path.join(main_dir, folder_name)
+
+    grid = gpd.read_file(os.path.join(shp_dir, "grid.shp"))
+    circles = gpd.read_file(os.path.join(shp_dir, "circles.shp"))
+    centers = gpd.read_file(os.path.join(shp_dir, "centers.shp"))
+
+    plot_all(grid, circles, centers)
+
+
+# Generate and export
+grid, circles, centers = generate_coverage_data("Europe_Communes/COMM_RG_01M_2016_3035.shp")
+export_coverage_data_shp(grid, circles, centers)
+
+# Later, or in another script: just plot from shapefiles
+plot_coverage()
+
