@@ -61,7 +61,7 @@ class ISA_Calculator:
             "Temperature [K]": T,
             "Pressure [Pa]": P,
             "Density [kg/m³]": rho,
-            "Gravity [m/s²]": g
+            "Gravity [m/s²]": g,
         })
     
     def sphere_layer_calculation(self, T, P, altitude, h_0, alpha):
@@ -78,6 +78,7 @@ class ISA_Calculator:
     
     def mach_number(self, V, result):
         a = math.sqrt(self.gamma * self.R * result["Temperature [K]"])
+        result["Speed of Sound [m/s]"] = a
         result["Mach Number"] = V / a
     
     def reynolds_number(self, V, L, result):

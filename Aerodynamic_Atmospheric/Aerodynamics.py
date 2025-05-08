@@ -12,7 +12,7 @@ class Aerodynamic:
         self.weight = weight
         self.altitude = altitude
         
-        self.altitude_range = np.linspace(0, 30000, 100).tolist()
+        self.altitude_range = np.arange(0, 30000, 100).tolist()
         self.isa = ISA_Calculator(self.altitude_range)
         self.altitude_data = self.isa.results
 
