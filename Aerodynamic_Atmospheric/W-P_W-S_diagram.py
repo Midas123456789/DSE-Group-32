@@ -153,13 +153,13 @@ if __name__ == "__main__":
     aircraft = WP_WS_Diagram(
         
         # Aerodynamics
-        A              = 12,   # Aspect Ratio
-        e              = 0.80,  # Oswald efficiency factor
-        CD0            = 0.030, # Parasite drag
-        h              = [0,10000,20000],     # Altitude
+        A              = 12,               # Aspect Ratio
+        e              = 0.80,             # Oswald efficiency factor
+        CD0            = 0.030,            # Parasite drag
+        h              = [0,10000,20000],  # Altitude
         
         # Weight estimation
-        f              = 1,   # Weight fraction (fuel)
+        f              = 1,     # Weight fraction (fuel)
         
         # Velocity
         V_cruise       = 15,    # Pre-given cruise speed

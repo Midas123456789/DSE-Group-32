@@ -107,8 +107,7 @@ class ISA_Calculator:
 
 # Example Usage
 if __name__ == "__main__":
-    #isa = ISA_Calculator(altitude=[20000, 30000, 50000], velocity=25, length=2)
-    isa = ISA_Calculator(altitude=[np.linspace(0, 20000, 20000)], velocity=25, length=2)
+    isa = ISA_Calculator(altitude=[15000, 30000, 50000], velocity=25, length=2)
     
     # Access temperature at 30,000 m:
-    print(isa.results[20000]["Temperature [K]"])
+    print(isa.results[15000]["Density [kg/m³]"])
