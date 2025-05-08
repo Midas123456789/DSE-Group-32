@@ -215,3 +215,25 @@ if __name__ == "__main__":
     CD = aircraft.drag_polar()
     drag = aircraft.Drag(CD)
     print(f"Drag: {drag:.2f} N")
+    
+
+def drag_polar(self, CL):
+    """Calculate Drag Coefficient and Drag Force"""
+    self.CD = self.CD0 + ((CL)**2)/(np.pi * self.A * self.e)
+    self.D = 0.5 * self.rho * self.V**2 * self.S * self.CD
+
+def plot_drag_polar(self, CL_range=np.linspace(0, 2.5, 2)):
+    """ Plot the drag polar curve: CD vs CL """
+    
+    CD_values = self.CD0 + (CL_range**2) / (np.pi * self.A * self.e)
+    
+    plt.figure(figsize=(8, 6))
+    plt.plot(CL_range, CD_values, label=f"Drag Polar (AR={self.A}, e={self.e})", color='navy')
+    plt.scatter(self.CL, self.CD0 + (self.CL**2) / (np.pi * self.A * self.e), color='red', label='Current CL')
+    plt.xlabel("Lift Coefficient (CL)")
+    plt.ylabel("Drag Coefficient (CD)")
+    plt.title("Drag Polar Curve")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
