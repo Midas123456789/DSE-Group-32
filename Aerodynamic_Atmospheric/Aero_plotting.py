@@ -54,19 +54,19 @@ def plot_A_LD(aircraft, CL_list):
     plt.show()
 
 def plot_P_V():
-    Vrange = np.arange(10, 200, 1)
+    Vrange = np.arange(10, 100, 1)
 
     P_lst = []
     for V in Vrange:
-        aircraft = AircraftAerodynamic(W=4000, h=15000, V=V, S=30, A=12, e=0.7, CD0=0.04, CL=1.2
+        aircraft = AircraftAerodynamic(W=4000, h=15000, V=V, S=30, A=25, e=0.7, CD0=0.04, CL=1.2
         )
         rho = aircraft.rho
         V = aircraft.V
-        D = aircraft.Drag()        
+        D = aircraft.Drag()
 
         P = sweep_propeller_radius(asb=asb, D=D, rho=rho, v_o=V)[1]
 
-        if V == 20:
+        if V == 20 or V == 50:
            specialpower = P
            otherpower = np.sqrt(2*aircraft.weight**3*aircraft.CD**2/(aircraft.S*aircraft.rho*aircraft.CL**3))
            Drag = D
@@ -77,9 +77,9 @@ def plot_P_V():
 
 
     plt.figure(figsize=(10, 6))
-    plt.plot(Vrange, P_lst, label='Power vs Velocity')
+    plt.plot(Vrange, np.array(P_lst)/1000, label='Power vs Velocity')
     plt.xlabel('Velocity (m/s)')
-    plt.ylabel('Power (W)')
+    plt.ylabel('Power (kW)')
     # plt.title(f'Power vs Velocity\nAltitude: {h} m | Weight: {aircraft.weight} N')
     plt.grid(True)
     plt.legend()
@@ -91,7 +91,7 @@ def plot_P_V():
     print(Drag)
     print(Mach)
     print(CD)
-
+    print(Vrange)
 
 
 
