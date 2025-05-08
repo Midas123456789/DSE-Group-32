@@ -25,29 +25,30 @@ class AirshipAerodynamic(Aerodynamic):
         - None
         """
         
-        rho_gas = {
-            "hydrogen": 0.0899,  # kg/m³
-            "helium": 0.1786     # kg/m³
+        molarmass_gas = {
+            "hydrogen": 0.002016,  # kg/mol
+            "helium": 0.0040026    # kg/mol
         }[self.gas_type]
+
 
         V = []
         for i in self.altitude_range:
+            rho_gas = (self.altitude_data[i]["Pressure [Pa]"] * molarmass_gas) / (self.R * self.altitude_data[i]["Temperature [K]"])
             V.append(self.weight / (self.altitude_data[i]["Density [kg/m³]"] - rho_gas))  # Convert to m³
 
         plt.figure(figsize=(10, 6))
         plt.plot(self.altitude_range, V, label=f'Gas Type: {self.gas_type.capitalize()}')
-        # plt.fill_between(h, 0, V, alpha=0.1)
         plt.xlabel('Altitude (m)')
         plt.ylabel('Volume (m³)')
         plt.title(f'Feasible Altitude (h) vs Volume (V)\nWeight: {self.weight} N')
         plt.xlim(0, 25000)
         plt.axhline(30000, color='red', linestyle='--', label='Max Volume (1e6 ft³)')
-        plt.ylim(0, 35000)
+        plt.ylim(0, 100000)
         plt.grid(True)
         plt.legend()
         plt.show()
 
 
 # Airship example
-airship = AirshipAerodynamic(weight=4000, altitude=20000, gas_type="hydrogen")
+airship = AirshipAerodynamic(weight=4000, altitude=20000, gas_type="helium")
 airship.plot_feasible_h_V()
