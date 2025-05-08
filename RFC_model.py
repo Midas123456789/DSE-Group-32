@@ -24,6 +24,25 @@ class RFC:
             return energy_kWh / self.vol_energy_density
         return 0
      
+     def required_electrolysis_power(self, electrolyzer_efficiency=0.7):
+       deficit = self.power_model.max_deficit()
+       if deficit is None:
+            return 0
+
+    # Total energy needed to regenerate hydrogen + oxygen (in J)
+    # This includes efficiency loss in electrolysis
+       energy_needed = abs(deficit) / electrolyzer_efficiency
+
+    # Count the number of seconds during the day when irradiance > 0
+       daylight_seconds = np.sum(self.power_model.irradiance > 0)
+       if daylight_seconds == 0:
+            return 0
+
+    # Required average power during daylight (in Watts)
+       return energy_needed / daylight_seconds
+
+
+     
 
 if __name__ == "__main__":
     # Replace power_required with real data or a test profile
@@ -35,6 +54,7 @@ if __name__ == "__main__":
 
     print("RFC Mass (kg):", rfc.rfc_mass_kg())
     print("RFC Volume (m³):", rfc.rfc_volume_m3())
+    print(f"Required Electrolysis Power (W): {rfc.required_electrolysis_power()}")
      
         
     
