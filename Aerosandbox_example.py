@@ -1,6 +1,6 @@
 import aerosandbox as asb
 import aerosandbox.numpy as np
-
+#test
 wing_airfoil = asb.Airfoil("sd7037")
 N_cords = 3
 g = 9.81
