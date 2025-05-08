@@ -23,6 +23,7 @@ class Airship:
         self.altitude = altitude
         self.density = 0.00211              # problem for later density at 
         self.density_sl = 0.0765 #lb/ft^3 # density at SL
+        self.density_maxh = 0.7860*self.density_sl
         self.mu = 3.66*10**-7               # find out
         self.n_engines = 4
         self.NL = 2.4               # find out
@@ -115,15 +116,19 @@ class Airship:
         self.K = self.K/self.NL
         
         return self.CD0, self.CD0tail, self.K
-    
+    #task 13
     def buoyant_lift(self):
         """
         Calculates the buoyant lift of the airship.
 
         """
-        self.buoyancy= self.gas_density*self.volume*self.density/self.density
+        self.buoyancy= self.gas_density*self.volume*self.density_maxh/self.density_sl
+        return self.buoyancy
     
-    
+    def weight(self):
+        
+        
+        return
 
     def print(self):
         return (f"Airship(FR={self.FR}, AR={self.AR}, volume={self.volume} m³, de={self.de} m, "
