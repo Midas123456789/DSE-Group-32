@@ -94,6 +94,21 @@ def plot_circles(grid, circles, centers):
     plt.show()
 
 
+def main(shapefile_path, n_cells=200, radius_m=150_000):
+    mainland = load_mainland_eu(shapefile_path)
+    grid = create_grid_within_eu(mainland, n_cells=n_cells)
+    circle_centers = generate_hexagonal_centers(grid.total_bounds, radius_m)
+    centers_gdf, circles_gdf = create_circles(circle_centers, radius_m)
+    circles_gdf = filter_circles_by_grid(circles_gdf, grid)
+    circles_gdf = remove_redundant_circles(circles_gdf, grid)
+    centers_gdf = circles_gdf.copy()
+    centers_gdf["geometry"] = centers_gdf["geometry"].centroid
+    centers_gdf, circles_gdf, grid = transform_to_wgs84(centers_gdf, circles_gdf, grid)
+
+    plot_circles(grid, circles_gdf, centers_gdf)
+
+    return centers_gdf
+
 def export_circle_coordinates(centers_gdf, output_path=None):
     """
     Converts circle center geometries to a DataFrame with lat/lon and optionally saves to CSV.
@@ -114,22 +129,6 @@ def export_circle_coordinates(centers_gdf, output_path=None):
 
     return df_locations
 
-
-def main(shapefile_path, n_cells=200, radius_m=150_000):
-    mainland = load_mainland_eu(shapefile_path)
-    grid = create_grid_within_eu(mainland, n_cells=n_cells)
-    circle_centers = generate_hexagonal_centers(grid.total_bounds, radius_m)
-    centers_gdf, circles_gdf = create_circles(circle_centers, radius_m)
-    circles_gdf = filter_circles_by_grid(circles_gdf, grid)
-    circles_gdf = remove_redundant_circles(circles_gdf, grid)
-    centers_gdf = circles_gdf.copy()
-    centers_gdf["geometry"] = centers_gdf["geometry"].centroid
-    centers_gdf, circles_gdf, grid = transform_to_wgs84(centers_gdf, circles_gdf, grid)
-
-    plot_circles(grid, circles_gdf, centers_gdf)
-
-    return centers_gdf
-
 # Example usage:
 centers_gdf = main("Europe_Communes/COMM_RG_01M_2016_3035.shp")
-df = export_circle_coordinates(centers_gdf, "circle_centers.csv")
+export_circle_coordinates(centers_gdf, "circle_centers.csv")
