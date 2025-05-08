@@ -25,8 +25,6 @@ class WP_WS_Diagram:
         self.TOP = TOP  # Takeoff Parameter (depends on aircraft class)
         self.takeoff_distance = takeoff_distance  # in meters
     
-
-    
     def wing_loading(self, V, CL_max):
         """Calculate Wing Loading for given velocity and maximum lift coefficient"""
         return 0.5 * self.rho * V**2 * CL_max
@@ -49,43 +47,45 @@ class WP_WS_Diagram:
         
         return results
     
-    def plot_wing_loading_constraints(self):
-        """Plot the Wing Loading Constraints for Stall in Landing and Cruise"""
+    def plot_wing_loading_constraints(self, CL_TO_list=None):
+        """Plot Wing Loading Constraints for Stall, Cruise, and Takeoff (with multiple CL_TO values)"""
         
         x_max = 1000
         y_max = 1
-        
+
         # Calculate wing loading for stall in landing condition
         WL_stall = self.wing_loading(self.V_stall, self.CL_max_land)
         
         # Calculate wing loading for cruise condition
         WL_cruise = self.wing_loading(self.V_cruise, self.CL_max_clean)
         
-        # Calculate W/P vs W/S
-        W_P_takeoff, W_S_takeoff = self.take_off_loading()
-        
+        # Get W/P vs W/S for all CL_TO values
+        takeoff_curves = self.take_off_loading(CL_TO_list)
+
         # Plotting the constraints and W/P vs W/S
         plt.figure(figsize=(10, 6))
         
-        # Plot Wing Loading Constraints
-        plt.axvline(x=WL_stall, color='red', linestyle='--', label=f"Stall in Landing: {WL_stall:.2f} N/m²")
+        # Plot vertical constraints
+        plt.axvline(x=WL_stall, color='red', linestyle='--', label=f"Stall: {WL_stall:.2f} N/m²")
         plt.axvline(x=WL_cruise, color='blue', linestyle='--', label=f"Cruise: {WL_cruise:.2f} N/m²")
         
-        # Fill the area left of the stall graph and above the takeoff curve in red
-        plt.fill_between(W_S_takeoff, W_P_takeoff, y_max, color='red', alpha=0.3, label="Unfeasible Area")
-        
-        # Plot the W/P vs W/S relation
-        plt.plot(W_S_takeoff, W_P_takeoff, label="W/P vs W/S (Takeoff)", color='green')
-        
+        # Plot each takeoff curve
+        for idx, (W_P_range, W_S_range, CL_TO) in enumerate(takeoff_curves):
+            label = f"Takeoff CL_TO={CL_TO:.2f}"
+            color = f"C{idx % 10}"
+            plt.plot(W_S_range, W_P_range, label=label, color=color)
+            plt.fill_between(W_S_range, W_P_range, y_max, color=color, alpha=0.15)
+
         plt.xlim(0, x_max)
         plt.ylim(0, y_max)
         plt.xlabel("Wing Loading (N/m²) / W/S (N/m²)")
         plt.ylabel("Power-to-Weight Ratio (W/P) [N/W]")
-        plt.title("Wing Loading and Takeoff Power-to-Weight Relation")
+        plt.title("Wing Loading vs Power-to-Weight (with Multiple CL_TO Values)")
         plt.legend()
         plt.grid(True)
         plt.tight_layout()
         plt.show()
+
 
 # Example Usage
 if __name__ == "__main__":
@@ -106,4 +106,4 @@ if __name__ == "__main__":
         takeoff_distance=500      # Takeoff Distance (meters)
     )
     
-    aircraft.plot_wing_loading_constraints()
+    aircraft.plot_wing_loading_constraints([1.4,1.6,1.8,2.0])
