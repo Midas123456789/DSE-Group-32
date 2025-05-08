@@ -33,7 +33,7 @@ class AircraftAerodynamic(Aerodynamic):
         CD0 = CD0 if CD0 is not None else self.CD0
         A = A if A is not None else self.A
         e = e if e is not None else self.e
-        return (CD0 + (CL ** 2) / (np.pi * A * e))/np.sqrt(1 - (self.M ** 2))  # Drag Coefficient
+        return (CD0 + (CL ** 2) / (np.pi * A * e))  # Drag Coefficient
 
     def Drag(self, CD=None, V=None, S=None, rho=None):
         CD = CD if CD is not None else self.CD
