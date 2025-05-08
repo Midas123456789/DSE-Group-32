@@ -6,9 +6,9 @@ from aerosandbox import Atmosphere
 import matplotlib.pyplot as plt
 
 # Constants
-altitude = 20000  # meters
+altitude = 18000  # meters
 D = 400           # Thrust [N]
-v_o = 40          # Flight speed [m/s]
+v_o = 20          # Flight speed [m/s]
 atmo = Atmosphere(altitude)
 rho = atmo.density()
 
@@ -47,7 +47,7 @@ def sweep_propeller_radius(asb, D, rho, v_o, r_min=0.75, r_max=6, r_step=0.05):
         # Derived quantities
         Adisk = pi * r**2
         T = D
-        power = 0.5 * rho * T * v_o * (cas.sqrt(T / (0.5 * rho * Adisk * v_o**2) + 1) + 1)
+        power = 0.5 * T * v_o * (np.sqrt(T / (0.5 * rho * Adisk * v_o**2) + 1) + 1)
         pitch = v_o / (RPM / 60)
 
         # Objective
@@ -103,6 +103,7 @@ def sweep_propeller_radius(asb, D, rho, v_o, r_min=0.75, r_max=6, r_step=0.05):
     plt.suptitle("Optimization of r and RPM vs Max Allowed Radius")
     plt.tight_layout()
     plt.show()
+    print(rho)
 
     return {
         "r_max_vals": r_max_vals,
