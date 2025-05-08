@@ -1,5 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import aerosandbox as asb
+from Power_calculation import sweep_propeller_radius
+from Aircraft_Aerodynamics import AircraftAerodynamic
 
 def plot_feasible_S_V(aircraft, CL_list):
     V = np.linspace(10, 200, 500)
@@ -49,3 +52,47 @@ def plot_A_LD(aircraft, CL_list):
     plt.legend()
     plt.tight_layout()
     plt.show()
+
+def plot_P_V():
+    Vrange = np.arange(10, 200, 1)
+
+    P_lst = []
+    for V in Vrange:
+        aircraft = AircraftAerodynamic(W=4000, h=15000, V=V, S=30, A=12, e=0.7, CD0=0.04, CL=1.2
+        )
+        rho = aircraft.rho
+        V = aircraft.V
+        D = aircraft.Drag()        
+
+        P = sweep_propeller_radius(asb=asb, D=D, rho=rho, v_o=V)[1]
+
+        if V == 20:
+           specialpower = P
+           otherpower = np.sqrt(2*aircraft.weight**3*aircraft.CD**2/(aircraft.S*aircraft.rho*aircraft.CL**3))
+           Drag = D
+           Mach = aircraft.M
+           CD = aircraft.CD
+        P_lst.append(P)
+
+
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(Vrange, P_lst, label='Power vs Velocity')
+    plt.xlabel('Velocity (m/s)')
+    plt.ylabel('Power (W)')
+    # plt.title(f'Power vs Velocity\nAltitude: {h} m | Weight: {aircraft.weight} N')
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+    print('hello')
+    print(specialpower)
+    print(otherpower)
+    print(Drag)
+    print(Mach)
+    print(CD)
+
+
+
+
+

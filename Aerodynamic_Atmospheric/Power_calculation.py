@@ -42,7 +42,7 @@ def sweep_propeller_radius(asb, D, rho, v_o, r_min=0.75, r_max=6, r_step=0.05):
 
     Adisk = pi * r**2
     T = D
-    power = 0.5 * rho * T * v_o * (cas.sqrt(T / (0.5 * rho * Adisk * v_o**2) + 1) + 1)
+    power = 0.5 * T * v_o * (cas.sqrt(T / (0.5 * rho * Adisk * v_o**2) + 1) + 1)
 
     opti.minimize(power)
     sol = opti.solve()

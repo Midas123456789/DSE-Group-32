@@ -15,7 +15,6 @@ def optimize_altitude_for_min_drag(aircraft, h_range):
     optimal_h = None
     for h in h_range:
         aircraft.altitude = h
-        print(aircraft.rho)
         V = aircraft.min_velocity()
         aircraft.V = V
         D = aircraft.Drag()
@@ -34,7 +33,8 @@ def determine_states_altitude(aircraft, h_range):
         rho = aircraft.rho
         V = aircraft.min_velocity()
         aircraft.V = V
-        print(aircraft.altitude, aircraft.rho, aircraft.V, aircraft.a, aircraft.M)
+        # print(aircraft.altitude, aircraft.rho, aircraft.V, aircraft.a, aircraft.M)
+        print('h', h, 'rho', rho, 'V', V, 'a', aircraft.a, 'M', aircraft.M)
         D = aircraft.Drag()
         L = aircraft.Lift()
         M = aircraft.M
