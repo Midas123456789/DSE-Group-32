@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 # Constants
 altitude = 18000  # meters
 D = 400           # Thrust [N]
-v_o = 20          # Flight speed [m/s]
+v_o = 100        # Flight speed [m/s]
 atmo = Atmosphere(altitude)
 rho = atmo.density()
 
