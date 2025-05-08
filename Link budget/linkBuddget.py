@@ -48,6 +48,10 @@ def distance_to_radius(distance):
     # Convert distance in km to radius in km
     return distance**2 - height**2
 
+def latency(distance):
+    # Latency = 2 * distance / speed_of_light
+    speed_of_light = 3e8  # Speed of light in m/s
+    return 2 * distance / speed_of_light  # in seconds
 
 total_haps_bitrate = 100e9  # Total bitrate in bps
 n_beams = 64  # Number of beams
@@ -87,3 +91,23 @@ plt.title('Transmitter Power vs Distance')
 plt.grid()
 plt.show()
 '''
+
+#fixed data rate, fixed -3db (bitrate) radius.
+#power as function of height
+def power_vs_height(height):
+    frequency, diameter_antenna = 3.7e9, 3  # Frequency in Hz, antenna diameter in meters, SNR in dB
+    bandwidth=100e6
+    snr_db = 10*np.log10(bitrate_to_snr(0.5*total_haps_bitrate/n_beams,bandwidth))
+
+    noise_figure_db=5
+    radius_3db=250e3  # 3 dB radius in meters (assumed to be constant for simplicity)
+    distance = np.sqrt(radius_3db**2 + height**2)  # Calculate distance using Pythagorean theorem
+    return n_beams*power_vs_distance(distance, frequency, diameter_antenna, snr_db, bandwidth=bandwidth, noise_figure_db=noise_figure_db)
+heights = np.linspace(13, 20, 100)  # Heights from 13 km to 20 km
+heights *= 1000  # Convert to meters
+powers = [power_vs_height(h) for h in heights]
+plt.plot(heights/1000, powers)
+#label the axes and title
+plt.xlabel('Height (km)')
+plt.ylabel('Transmitter Power (Watts)')
+plt.show()
