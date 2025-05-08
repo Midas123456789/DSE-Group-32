@@ -1,9 +1,11 @@
 import math
+import numpy as np
 
 class ISA_Calculator:
     
     def __init__(self, altitude=0, velocity=0, length=0):
         # Constants
+        print(altitude)
         self.g0 = 9.80665
         self.R = 287.05287
         self.T0 = 288.15
@@ -97,12 +99,16 @@ class ISA_Calculator:
                 output.append(f"{key.ljust(max_key_length)} | {value:>13,.5f}")
             output.append("")
         return "\n".join(output)
+    
+    def plot(self):
+        """ Visualize the ISA properties """
+        pass
 
 
 # Example Usage
 if __name__ == "__main__":
-    isa = ISA_Calculator(altitude=[20000, 30000, 50000], velocity=25, length=2)
-    print(isa)
+    #isa = ISA_Calculator(altitude=[20000, 30000, 50000], velocity=25, length=2)
+    isa = ISA_Calculator(altitude=[np.linspace(0, 20000, 20000)], velocity=25, length=2)
     
     # Access temperature at 30,000 m:
-    print(isa.results[30000]["Temperature [K]"])
+    print(isa.results[20000]["Temperature [K]"])
