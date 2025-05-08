@@ -160,4 +160,3 @@ export_coverage_data_shp(grid, circles, centers)
 
 # Later, or in another script: just plot from shapefiles
 plot_coverage()
-
