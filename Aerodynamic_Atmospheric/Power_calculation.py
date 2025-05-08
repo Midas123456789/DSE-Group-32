@@ -4,13 +4,14 @@ from aerosandbox import cas
 from numpy import pi
 from aerosandbox import Atmosphere
 import matplotlib.pyplot as plt
+from Aircraft_Aerodynamics import AircraftAerodynamic
 
 # Constants
-altitude = 20000  # meters
-D = 400           # Thrust [N]
-v_o = 40          # Flight speed [m/s]
-atmo = Atmosphere(altitude)
-rho = atmo.density()
+# altitude = 20000  # meters
+# D = 400           # Thrust [N]
+# v_o = 40          # Flight speed [m/s]
+# atmo = Atmosphere(altitude)
+# rho = atmo.density()
 
 def sweep_propeller_radius(asb, D, rho, v_o, r_min=0.75, r_max=6, r_step=0.05):
     """
@@ -38,7 +39,7 @@ def sweep_propeller_radius(asb, D, rho, v_o, r_min=0.75, r_max=6, r_step=0.05):
     rpm_torque_ratio_list = []
 
     opti = asb.Opti()
-    r = opti.variable(init_guess=1, lower_bound=0.5, upper_bound=4)
+    r = 2
 
     Adisk = pi * r**2
     T = D
@@ -62,7 +63,7 @@ def sweep_propeller_radius(asb, D, rho, v_o, r_min=0.75, r_max=6, r_step=0.05):
     #     # Derived quantities
     #     Adisk = pi * r**2
     #     T = D
-    #     power = 0.5 * rho * T * v_o * (cas.sqrt(T / (0.5 * rho * Adisk * v_o**2) + 1) + 1)
+    #     power = 0.5 * T * v_o * (cas.sqrt(T / (0.5 * rho * Adisk * v_o**2) + 1) + 1)
     #     pitch = v_o / (RPM / 60)
 
     #     # Objective
@@ -85,7 +86,7 @@ def sweep_propeller_radius(asb, D, rho, v_o, r_min=0.75, r_max=6, r_step=0.05):
     #     power_list.append(P_opt)
     #     rpm_torque_ratio_list.append(RPM_opt / torque_opt)
 
-    # Find lowest RPM/Torque ratio
+    # # Find lowest RPM/Torque ratio
     # min_ratio_index = np.argmin(rpm_torque_ratio_list)
     # r_min_ratio = r_max_vals[min_ratio_index]
     # min_ratio_value = rpm_torque_ratio_list[min_ratio_index]
@@ -96,7 +97,7 @@ def sweep_propeller_radius(asb, D, rho, v_o, r_min=0.75, r_max=6, r_step=0.05):
     # print(f"At this radius, the optimized RPM is: {RPM_at_min_ratio:.2f} RPM")
     # print(f"At this radius, the optimized Torque is: {torque_at_min_ratio:.2f} Nm")
 
-    # Plot
+    # # Plot
     # plt.figure(figsize=(12, 8))
 
     # plt.subplot(3, 1, 1)
@@ -136,4 +137,13 @@ def sweep_propeller_radius(asb, D, rho, v_o, r_min=0.75, r_max=6, r_step=0.05):
         }
     }
 
+
+aircraft = AircraftAerodynamic(W=4000, h=15000, V=50, S=30, A=25, e=0.7, CD0=0.04, CL=1.2
+        )
+
+D = aircraft.Drag()
+rho = aircraft.rho
+v_o = aircraft.V
+
 results = sweep_propeller_radius(asb=asb, D=D, rho=rho, v_o=v_o)
+print(results)
