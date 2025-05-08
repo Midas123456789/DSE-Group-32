@@ -21,10 +21,12 @@ class Airship:
         self.reference_volume = self.volume**(2/3)
         self.velocity = velocity
         self.altitude = altitude
-        self.density = 0.00211              # problem for later
+        self.density = 0.00211              # problem for later density at 
+        self.density_sl = 0.0765 #lb/ft^3 # density at SL
         self.mu = 3.66*10**-7               # find out
         self.n_engines = 4
         self.NL = 2.4               # find out
+        self.gas_density =  0.0646 #lb/ft3 for helium at sea level
         #self.length = length
         #self.n_eng = n_eng
         #self.payload = payload
@@ -112,7 +114,14 @@ class Airship:
         self.K = -0.0146*(1/self.AR)**4+0.182*(1/self.AR)**3-0.514*(1/self.AR)**2+0.838*(1/self.AR)-0.053
         self.K = self.K/self.NL
         
-        return self.CD0, self.CD0tail
+        return self.CD0, self.CD0tail, self.K
+    
+    def buoyant_lift(self):
+        """
+        Calculates the buoyant lift of the airship.
+
+        """
+        self.buoyancy= self.gas_density*self.volume*self.density/self.density
     
     
 
