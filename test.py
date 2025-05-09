@@ -1,41 +1,139 @@
-import numpy as np
-from scipy.integrate import quad
+import aerosandbox as asb
+import aerosandbox.numpy as np
+from mass_wing import Mass_wing
 
-class Power:
-    def __init__(self, I_max=1000, latitude=52.0, declination=23.44):
-        self.I_max = I_max  # Maximum solar irradiance (W/m²)
-        self.latitude = latitude  # Observer's latitude (degrees)
-        self.declination = declination  # Solar declination (degrees)
-    
-    def solar_angle(self, t):
-        """
-        Calculate the solar zenith angle based on time `t` (in hours).
-        """
-        hour_angle = 15 * (t - 12)  # Hour angle: 15° per hour, centered on noon
-        angle = 90 - (self.latitude + self.declination * np.cos(np.deg2rad(hour_angle)))
-        return np.deg2rad(angle)
-    
-    def irradiance(self, t):
-        """
-        Calculate the solar irradiance at time `t` (in hours) using a cosine model.
-        """
-        angle = self.solar_angle(t)
-        return self.I_max * np.cos(angle)
-    
-    def energy_over_day(self, sunrise_time=6, sunset_time=18):
-        """
-        Calculate the total solar energy (in kWh) using numerical integration.
-        sunrise_time and sunset_time are in hours.
-        """
-        # Perform the integration of irradiance over the daylight hours
-        result, error = quad(self.irradiance, sunrise_time, sunset_time)
-        # Convert energy from Watt-seconds to kWh (1 W = 1 J/s, 1 hour = 3600 seconds)
-        energy_kWh = result / 1000 / 3600
-        return energy_kWh
+# === Constants === #
+wing_airfoil = asb.Airfoil("sd7037")
+N_cords = 4
+g = 9.81
+altitude = 15000
+atm = asb.Atmosphere(altitude=altitude)
+opti = asb.Opti()
 
-# Usage example
-power_model = Power(I_max=1000, latitude=52.0, declination=23.44)
+# === Solar & Power Parameters === #
+solar_irradiance = 700         # W/m^2 available at altitude
+solar_efficiency = 0.20        # 20% cell efficiency
+motor_eff = 0.8
+prop_eff = 0.8
+η_prop = motor_eff * prop_eff  # Total propulsive efficiency
 
-# Calculate the total energy from 6 AM to 6 PM
-total_energy = power_model.energy_over_day(sunrise_time=6, sunset_time=18)
-print(f"Total energy received during the day: {total_energy:.2f} kWh")
+# === Mass Parameters === #
+W_payload = 3000  # N
+
+# === Design Variables === #
+cords = opti.variable(init_guess=3 * np.ones(N_cords), n_vars=N_cords)
+b = opti.variable(init_guess=60, upper_bound=70, lower_bound=0)
+V = opti.variable(init_guess=30, upper_bound=200, lower_bound=40)
+alpha = opti.variable(init_guess=5, lower_bound=0, upper_bound=30)
+
+# === Geometry Setup === #
+y_sections = np.linspace(0, b / 2, N_cords)
+wing = Mass_wing(
+    symmetric=True,
+    xsecs=[
+        asb.WingXSec(
+            xyz_le=[-0.25 * cords[i], y_sections[i], 0],
+            chord=cords[i],
+            airfoil=wing_airfoil
+        )
+        for i in range(N_cords)
+    ]
+).translate([4, 0, 0])
+airplane = asb.Airplane(wings=[wing])
+
+# === Constraints === #
+opti.subject_to([
+    cords > 0,
+    np.diff(cords) <= 0,  # Taper
+    wing.area() < 2000
+])
+
+# === Aerodynamics === #
+op = asb.OperatingPoint(velocity=V, alpha=alpha, atmosphere=atm)
+aero = asb.AeroBuildup(airplane=airplane, op_point=op).run()
+
+# === Lift & Drag Forces === #
+L = 0.5 * atm.density() * V**2 * aero['CL'] * wing.area()
+D = 0.5 * atm.density() * V**2 * aero['CD'] * wing.area()
+
+# === Skin Weight === #
+skin_density = 0.25  # kg/m², adjust based on material
+W_skin = 2 * wing.area() * skin_density * g
+
+# === Spar Weight === #
+spar_mass = wing.spar_mass(L, b)  # kg
+W_spar = spar_mass * g            # N
+
+# === Total Weight === #
+W_total = W_payload + W_spar + W_skin
+opti.subject_to(L >= W_total)
+
+# === Payload Power === #
+P_payload = 5000  # Watts, constant power for onboard systems
+
+# === Power Required & Generated === #
+P_required = D * V
+P_generated = wing.area() * solar_irradiance * solar_efficiency
+P_available = P_generated * η_prop - P_payload  # Account for payload power draw
+
+# === Power Constraint === #
+opti.subject_to(P_available >= P_required)
+
+
+# === Power Constraint === #
+opti.subject_to(P_available >= P_required)
+
+# === Objective === #
+opti.minimize(P_required)
+
+# === Solve === #
+sol = opti.solve()
+
+# === Extract Solved Values === #
+cords_sol = sol.value(cords)
+b_sol = sol.value(b)
+V_sol = sol.value(V)
+alpha_sol = sol.value(alpha)
+area_sol = sol.value(wing.area())
+CL_sol = sol.value(aero['CL'])
+CD_sol = sol.value(aero['CD'])
+L_sol = sol.value(L)
+D_sol = sol.value(D)
+P_required_sol = sol.value(P_required)
+P_generated_sol = sol.value(P_generated)
+P_available_sol = sol.value(P_available)
+W_spar_sol = sol.value(W_spar)
+
+# === Rebuild Solved Wing === #
+y_sections_sol = np.linspace(0, b_sol / 2, N_cords)
+wing_sol = Mass_wing(
+    symmetric=True,
+    xsecs=[
+        asb.WingXSec(
+            xyz_le=[-0.25 * cords_sol[i], y_sections_sol[i], 0],
+            chord=cords_sol[i],
+            airfoil=wing_airfoil
+        )
+        for i in range(N_cords)
+    ]
+).translate([4, 0, 0])
+
+airplane_sol = asb.Airplane(wings=[wing_sol])
+airplane_sol.draw(show=True)
+
+# === Print Results === #
+print("==== Optimization Results ====")
+print(f"Span b:               {b_sol:.2f} m")
+print(f"Chord distribution:   {cords_sol}")
+print(f"Flight velocity:      {V_sol:.2f} m/s")
+print(f"Angle of attack:      {alpha_sol:.2f} deg")
+print(f"Wing area:            {area_sol:.2f} m²")
+print(f"CL:                   {CL_sol:.3f}")
+print(f"CD:                   {CD_sol:.3f}")
+print(f"Lift:                 {L_sol:.2f} N")
+print(f"Drag:                 {D_sol:.2f} N")
+print(f"Spar weight:          {W_spar_sol:.2f} N")
+print(f"Total weight:         {W_payload + W_spar_sol:.2f} N")
+print(f"Power required:       {P_required_sol:.2f} W")
+print(f"Power generated:      {P_generated_sol:.2f} W")
+print(f"Power available:      {P_available_sol:.2f} W")

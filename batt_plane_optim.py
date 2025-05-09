@@ -25,8 +25,8 @@ atm = asb.Atmosphere(altitude=altitude)
 opti = asb.Opti()
 
 
-cords = opti.variable(init_guess=8 * np.ones(N_cords), n_vars=N_cords)
-b = opti.variable(init_guess=40, upper_bound=70, lower_bound=0)
+cords = opti.variable(init_guess=3 * np.ones(N_cords), n_vars=N_cords)
+b = opti.variable(init_guess=80, upper_bound=70, lower_bound=0)
 V = opti.variable(init_guess=30, upper_bound=200, lower_bound=40)
 # Define y-locations based on variable b
 y_sections = np.linspace(0, b / 2, N_cords)
@@ -44,7 +44,6 @@ wing = Mass_wing(
 ).translate([4, 0, 0])
 
 airplane = asb.Airplane(wings=[wing])
-
 
 
 opti.subject_to([
@@ -113,15 +112,15 @@ print("=== GEOMETRY ===")
 print("Optimized span b (m):", sol(b))
 print("Optimized alpha (deg):", sol(alpha))
 print("Optimized chords (m):", sol(cords))
+print("Optimized AR :", sol(wing.aspect_ratio()))
 print("Wing area:", sol(wing.area()))
-print("Root r =", sol(root_r))
-print("Tip r =", sol(tip_r))
 print()
 
 # Aerodynamics
 print("=== AERODYNAMICS ===")
 print("CL:", sol(aero['CL']))
 print("CD:", sol(aero['CD']))
+print("L/D =", sol(aero['CL']) / sol(aero['CD']))
 print()
 
 # Performance
@@ -135,6 +134,7 @@ print()
 # Structure
 print("=== STRUCTURE ===")
 print("Spar thickness =", sol(spar_thickness))
+print()
 
 print("=== MASS ===")
 print("Mass =", sol(W) / g)
@@ -142,6 +142,7 @@ print("Spar mass =", sol(spar_mass))
 print("Mass bat =", sol(Mbat))
 print("Mass skin =", sol(Mskin))
 print("Wing loading Kg/m2 =", sol(W) / g / sol(wing.area()))
+print()
 
 print('=== COST ===')
 batt_mass = sol(Mbat)

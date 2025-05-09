@@ -125,6 +125,7 @@ print()
 print("=== AERODYNAMICS ===")
 print("CL:", sol(aero['CL']))
 print("CD:", sol(aero['CD']))
+print("L/D =", sol(aero['CL']) / sol(aero['CD']))
 print()
 
 # Performance
@@ -132,10 +133,12 @@ print("=== PERFORMANCE ===")
 print("V =", sol(V))
 print("Lift L =", sol(L))
 print("Required Power Pr =", sol(Pr))
+print()
 
 # Structure
 print("=== STRUCTURE ===")
 print("Spar thickness =", sol(spar_thickness))
+print()
 
 print("=== MASS ===")
 print("Mass =", sol(W) / g)
@@ -143,6 +146,7 @@ print("Spar mass =", sol(spar_mass))
 print("Mass hydro =", 2 * sol(M_tank))
 print("Mass skin =", sol(Mskin))
 print("Wing loading Kg/m2 =", sol(W) / g / sol(wing.area()))
+print()
 
 print('=== COST ===')
 LH_per_day = M_fuel / mission_days
