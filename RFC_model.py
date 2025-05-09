@@ -4,7 +4,7 @@ import numpy as np
 #Values from sources
 
 class RFC:
-     def __init__(self, power_model: Power, energy_density = 4, vol_energy_density = 1.2, efficiency=0.35, energy_density_hydrogen=33.33): #specific energy in kWh/kg, volemtric specific energy in kWh/m^3 efficency in %
+     def __init__(self, power_model: Power, energy_density = 2.6, vol_energy_density = 1.2, efficiency=0.5, energy_density_hydrogen=33.33): #specific energy in kWh/kg, volemtric specific energy in kWh/m^3 efficency in %
             self.power_model = power_model
             self.energy_density = energy_density
             self.vol_energy_density = vol_energy_density
@@ -74,8 +74,8 @@ if __name__ == "__main__":
     irradiance = power_model.irradiance
     full_power_required = np.where(
         irradiance > 0,
-        150_000 + electrolysis_power,
-        150_000
+        50_000 + electrolysis_power,
+        50_000
     )
 
    
