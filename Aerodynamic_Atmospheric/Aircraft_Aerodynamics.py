@@ -49,10 +49,9 @@ class AircraftAerodynamic(Aerodynamic):
         rho = rho if rho is not None else self.rho
         return 0.5 * rho * (V ** 2) * S * CL
     
-    def min_velocity(self, CL=None, S=None, rho=None):
+    def min_velocity(self, CL=None, S=None, rho=None, weight=None):
         CL = CL if CL is not None else self.CL
         S = S if S is not None else self.S
         rho = rho if rho is not None else self.rho
-        return np.sqrt((2 * self.weight) / (rho * S * CL))
-
-  
+        weight = weight if weight is not None else self.weight
+        return np.sqrt((2 * weight) / (rho * S * CL))

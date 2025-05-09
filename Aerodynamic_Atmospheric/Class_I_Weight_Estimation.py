@@ -70,12 +70,17 @@ class Class_I_Weight_Estimation():
             self.MTOW_kg = new_MTOW
         
         if self.converged:
-            self.estimated_MTOW = self.MTOW_kg
-            self.estimated_OEW = self.MTOW_kg * self.empty_weight_fraction
-            self.estimated_fuel_weight = self.MTOW_kg * self.fuel_fraction
-            self.results["Maximum Take-off Weight [kg]"] = round(self.estimated_MTOW, 3)
-            self.results["Operation Empty Weight [kg]"] = round(self.estimated_OEW, 3)
-            self.results["Fuel Weight [kg]"] = round(self.estimated_fuel_weight, 3)
+            self.estimated_MTOM = self.MTOW_kg
+            self.estimated_OEM = self.MTOW_kg * self.empty_weight_fraction
+            self.estimated_fuel_mass = self.MTOW_kg * self.fuel_fraction
+            
+            self.estimated_MTOW = self.MTOW_kg * self.g
+            self.estimated_OEW = self.MTOW_kg * self.empty_weight_fraction * self.g
+            self.estimated_fuel_weight = self.MTOW_kg * self.fuel_fraction * self.g
+            
+            self.results["Maximum Take-off Weight [kg]"] = round(self.estimated_MTOM, 3)
+            self.results["Operation Empty Weight [kg]"] = round(self.estimated_OEM, 3)
+            self.results["Fuel Weight [kg]"] = round(self.estimated_fuel_mass, 3)
             self.results["Battery Mass [kg]"] = round(self.battery_mass_kg, 3)
     
     def Determine_Used_Fuel(self):
@@ -86,7 +91,7 @@ class Class_I_Weight_Estimation():
     
     def Determine_MLW(self):
         if self.converged:
-            residual_fuel_weight = self.estimated_fuel_weight * self.residual_fuel_fraction
+            residual_fuel_weight = self.estimated_fuel_mass * self.residual_fuel_fraction
             mlw = self.estimated_OEW + self.payload_weight_kg + self.battery_mass_kg + residual_fuel_weight
             self.results["Maximum Landing Weight [kg]"] = round(mlw, 3)
     
@@ -104,7 +109,7 @@ class Class_I_Weight_Estimation():
         self.results["Estimated Endurance [s]"] = round(self.Endurance_Brequet, 3)
     
     def __str__(self):
-        self.results["Estimated Weight [N]"] = round(self.estimated_MTOW * self.g, 3)
+        self.results["Estimated Weight [N]"] = round(self.estimated_MTOM * self.g, 3)
         output = ["Class I Weight Estimation Results:\n"]
         max_key_length = max(len(key) for key in self.results.keys())
         header = f"{'Parameter'.ljust(max_key_length)} | Value"
@@ -119,7 +124,7 @@ class Class_I_Weight_Estimation():
     def Plot_Payload_Range_Diagram(self):
         MTOW = self.estimated_MTOW
         OEW = self.estimated_OEW
-        Fuel = self.estimated_fuel_weight
+        Fuel = self.estimated_fuel_mass
         Battery = self.battery_mass_kg
         Payload_max = MTOW - OEW - Fuel - Battery
         MZFW = OEW + Payload_max + Battery

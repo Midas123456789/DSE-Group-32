@@ -4,70 +4,59 @@ from Requirements import *
 from ISA_Calculator import *
 from Aero_plotting import *
 
+class Aircraft_Inputs:
+
+    def __init__(self, **kwargs):
+        # Save all inputs as attributes
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
 class Aircraft:
-    
-    def __init__(self, payload_weight_kg, residual_fuel_fraction ,empty_weight_fraction, initial_mtow_guess_kg, 
-                W1_WTO, W2_W1, W3_W2, W4_W3, W5_W4, W6_W5, W7_W6, W8_W7, Wfinal_W8, n_p, c_p, A, e, C_D_0, V_cruise, 
-                battery_energy_required_Wh, battery_specific_energy_Wh_per_kg, h_cruise, chord_length, S, CL_cruise, CL_land, CL_TO):
+    def __init__(self, inputs: Aircraft_Inputs):
+        self.inputs = inputs
         
-        # Requirements input
-        self.payload_weight_kg = payload_weight_kg
+        # Subsystems initialized here
+        self.ISA = ISA_Calculator(
+            altitude=inputs.h_cruise,
+            velocity=inputs.V_cruise,
+            length=inputs.chord_length,
+        )
         
-        # Battery inputs
-        self.battery_energy_required_Wh = battery_energy_required_Wh
-        self.battery_specific_energy_Wh_per_kg = battery_specific_energy_Wh_per_kg
+        self.class_I = Class_I_Weight_Estimation(
+            payload_weight_kg=inputs.payload_weight_kg,
+            empty_weight_fraction=inputs.empty_weight_fraction,
+            initial_mtow_guess_kg=inputs.initial_mtow_guess_kg,
+            residual_fuel_fraction=inputs.residual_fuel_fraction,
+            W1_WTO=inputs.W1_WTO, W2_W1=inputs.W2_W1, W3_W2=inputs.W3_W2,
+            W4_W3=inputs.W4_W3, W5_W4=inputs.W5_W4, W6_W5=inputs.W6_W5,
+            W7_W6=inputs.W7_W6, W8_W7=inputs.W8_W7, Wfinal_W8=inputs.Wfinal_W8,
+            battery_energy_required_Wh=inputs.battery_energy_required_Wh,
+            battery_specific_energy_Wh_per_kg=inputs.battery_specific_energy_Wh_per_kg,
+            n_p=inputs.n_p, c_p=inputs.c_p,
+            A=inputs.A, e=inputs.e,
+            C_D_0=inputs.C_D_0, V_cruise=inputs.V_cruise,
+            g=self.ISA.results[inputs.h_cruise]["Gravity [m/s²]"]
+        )
         
-        # Inputs for first weight estimation
-        self.residual_fuel_fraction = residual_fuel_fraction
-        self.empty_weight_fraction = empty_weight_fraction
-        self.initial_mtow_guess_kg = initial_mtow_guess_kg
-        
-        # Fuel estimation fractions
-        self.W1_WTO = W1_WTO
-        self.W2_W1 = W2_W1
-        self.W3_W2 = W3_W2
-        self.W4_W3 = W4_W3
-        self.W5_W4 = W5_W4
-        self.W6_W5 = W6_W5
-        self.W7_W6 = W7_W6
-        self.W8_W7 = W8_W7
-        self.Wfinal_W8 = Wfinal_W8
-        
-        # Range estimation variables
-        self.n_p = n_p
-        self.c_p = c_p
-        self.C_D_0 = C_D_0
-        self.V_cruise = V_cruise
-        self.h_cruise = h_cruise
-        
-        # Coefficients
-        self.CL_TO = CL_TO
-        self.CL_cruise = CL_cruise
-        self.CL_land = CL_land
-        
-        # Dimensions
-        self.chord_length = chord_length
-        self.S = S
-        self.A = A
-        self.e = e
-        
-        # Altitude plotting variables
-        self.altitude_range = np.arange(0, 30000, 100).tolist()
-        self.isa = ISA_Calculator(self.altitude_range)
-        self.altitude_data = self.isa.results
+        self.aero = AircraftAerodynamic(
+            W=self.class_I.estimated_MTOW,
+            h=inputs.h_cruise, V=inputs.V_cruise,
+            S=inputs.S, A=inputs.A, e=inputs.e,
+            CD0=inputs.C_D_0, CL=inputs.CL_cruise
+        )
 
 
 if __name__ == "__main__":
     
-    Requirements = Requirements()
+    req = Requirements()
     
-    AC = Aircraft(
+    inputs = Aircraft_Inputs(
         
-        payload_weight_kg  = Requirements.payload_weight_kg,
+        payload_weight_kg  = req.payload_weight_kg,
         
         residual_fuel_fraction  = 0.0, 
         empty_weight_fraction   = 0.7, 
-        initial_mtow_guess_kg   = 15 * Requirements.payload_weight_kg, 
+        initial_mtow_guess_kg   = 15 * req.payload_weight_kg, 
         
         W1_WTO     = 1, 
         W2_W1      = 1, 
@@ -82,7 +71,7 @@ if __name__ == "__main__":
         n_p       = 0.85, 
         c_p       = 0.6, 
         
-        CL_cruise = 1.5,
+        CL_cruise = 1.2,
         CL_TO     = 2.0,
         CL_land   = 2.2,
         
@@ -91,67 +80,20 @@ if __name__ == "__main__":
         h_cruise  = 20000,
         
         chord_length = 3,
-        S            = 50,
-        A         = 25, 
-        e         = 0.8, 
+        S            = 30,
+        A         = 20, 
+        e         = 0.7, 
         
         battery_energy_required_Wh         = 20000, 
         battery_specific_energy_Wh_per_kg  = 435,
         
     )
     
-    ISA = ISA_Calculator(
-        
-        altitude  = AC.h_cruise,
-        velocity  = AC.V_cruise,
-        length    = AC.chord_length,
-        
-    )
+    ac = Aircraft(inputs)
     
-    class_I = Class_I_Weight_Estimate = Class_I_Weight_Estimation(
-        
-        # Estimates and given weights
-        payload_weight_kg      = AC.payload_weight_kg,
-        empty_weight_fraction  = AC.empty_weight_fraction,
-        initial_mtow_guess_kg  = AC.initial_mtow_guess_kg,
-        
-        # Fuel fractions
-        residual_fuel_fraction = AC.residual_fuel_fraction,
-        W1_WTO     = AC.W1_WTO,
-        W2_W1      = AC.W2_W1,
-        W3_W2      = AC.W3_W2,
-        W4_W3      = AC.W4_W3,
-        W5_W4      = AC.W5_W4,
-        W6_W5      = AC.W6_W5,
-        W7_W6      = AC.W7_W6,
-        W8_W7      = AC.W8_W7,
-        Wfinal_W8  = AC.Wfinal_W8,
-        
-        # Battery additions
-        battery_energy_required_Wh        = AC.battery_energy_required_Wh, 
-        battery_specific_energy_Wh_per_kg = AC.battery_specific_energy_Wh_per_kg,  
-        
-        # Properties for range and endurance
-        n_p        = AC.n_p,
-        c_p        = AC.c_p,
-        A          = AC.A,
-        e          = AC.e,
-        C_D_0      = AC.C_D_0,
-        V_cruise   = AC.V_cruise,
-        g          = ISA.results[AC.h_cruise]["Gravity [m/s²]"],
-    )
+    # Example usage
+    print("MTOW:", ac.class_I.estimated_MTOW)
+    print("Cruise Drag:", ac.aero.Drag())
     
-    Aerodynamics = AircraftAerodynamic(
-        
-        W    = class_I.estimated_MTOW, 
-        h    = AC.h_cruise, 
-        V    = AC.V_cruise, 
-        S    = AC.S, 
-        A    = AC.A, 
-        e    = AC.e, 
-        CD0  = AC.C_D_0, 
-        CL   = AC.CL_cruise
-    
-    )
     
     
