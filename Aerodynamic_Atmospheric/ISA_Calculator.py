@@ -61,8 +61,8 @@ class ISA_Calculator:
         result.update({
             "Temperature [K]": T,
             "Pressure [Pa]": P,
-            "Density [kg/m³]": rho,
-            "Gravity [m/s²]": g,
+            "Density [kg/m3]": rho,
+            "Gravity [m/s2]": g,
         })
     
     def sphere_layer_calculation(self, T, P, altitude, h_0, alpha):
@@ -84,7 +84,7 @@ class ISA_Calculator:
     
     def reynolds_number(self, V, L, result):
         mu = self.dynamic_viscosity(result["Temperature [K]"])
-        result["Reynolds Number"] = (result["Density [kg/m³]"] * V * L) / mu
+        result["Reynolds Number"] = (result["Density [kg/m3]"] * V * L) / mu
     
     def __str__(self):
         output = ["ISA Calculator Results:\n"]
@@ -109,4 +109,4 @@ if __name__ == "__main__":
     isa = ISA_Calculator(altitude=[15000, 30000, 50000], velocity=25, length=2)
     
     # Access temperature at 30,000 m:
-    print(isa.results[15000]["Density [kg/m³]"])
+    print(isa.results[15000]["Gravity [m/s2]"])

@@ -9,7 +9,7 @@ def plot_feasible_S_V(aircraft, CL_list):
         if cl <= 0:
             raise ValueError(f"Lift coefficient must be > 0. Got {cl}.")
         # Use inputs from the new aircraft class
-        S = (2 * aircraft.class_I.estimated_MTOW) / (aircraft.aero.altitude_data[aircraft.inputs.h_cruise]["Density [kg/m³]"] * V**2 * cl)
+        S = (2 * aircraft.class_I.estimated_MTOW) / (aircraft.aero.altitude_data[aircraft.inputs.h_cruise]["Density [kg/m3]"] * V**2 * cl)
         plt.plot(V, S, label=f'CL = {cl}')
         plt.fill_between(V, 0, S, alpha=0.1)
     plt.axhline(aircraft.inputs.S, color='red', linestyle='--', label=f'{aircraft.inputs.S} m² Wing Area')
@@ -28,7 +28,7 @@ def plot_h_V(aircraft):
     Pmax = 2000  # Watts
 
     for h in altitude_range:
-        rho = aircraft.aero.altitude_data[h]["Density [kg/m³]"]
+        rho = aircraft.aero.altitude_data[h]["Density [kg/m3]"]
         Vmin.append(np.sqrt((2 * aircraft.class_I.estimated_MTOW) / (rho * aircraft.inputs.S * aircraft.inputs.CL_cruise)))
 
         CD = aircraft.aero.drag_polar()
@@ -69,7 +69,7 @@ def plot_P_V(aircraft):
     for h in hrange:
         P_lst = []
         P2_lst = []
-        rho = aircraft.aero.altitude_data[h]["Density [kg/m³]"]
+        rho = aircraft.aero.altitude_data[h]["Density [kg/m3]"]
         for V in Vrange:
             # Use drag method and other aerodynamic properties from the new class
             D = aircraft.aero.Drag(V=V, rho=rho)
@@ -98,7 +98,7 @@ def plot_h_W(aircraft):
     W_lst = []
 
     for h in h_list:
-        rho = aircraft.aero.altitude_data[h]["Density [kg/m³]"]
+        rho = aircraft.aero.altitude_data[h]["Density [kg/m3]"]
         weight = 0
         for _ in range(100):
             V = aircraft.aero.min_velocity(rho=rho, weight=weight)
@@ -135,7 +135,7 @@ def plot_h_Preq(aircraft):
     V_lst = []
 
     for h in h_list:
-        rho = aircraft.aero.altitude_data[h]["Density [kg/m³]"]
+        rho = aircraft.aero.altitude_data[h]["Density [kg/m3]"]
         weight = aircraft.class_I.estimated_MTOW
         for _ in range(100):
             V = aircraft.aero.min_velocity(rho=rho, weight=weight)

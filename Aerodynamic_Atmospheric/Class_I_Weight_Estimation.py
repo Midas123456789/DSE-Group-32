@@ -10,16 +10,16 @@ class Class_I_Weight_Estimation():
     def __init__(self, payload_weight_kg=100,
                     residual_fuel_fraction=0.0 ,empty_weight_fraction=0.5, initial_mtow_guess_kg=1000, iteration_limit=100, tolerance=0.1, 
                     W1_WTO=1, W2_W1=1, W3_W2=1, W4_W3=1, W5_W4=1, W6_W5=1, W7_W6=1, W8_W7=1, Wfinal_W8=1,
-                    n_p=0, c_p=0, g=0, A=0, e=0, C_D_0=0, V_cruise=0,
-                    battery_energy_required_Wh=0, battery_specific_energy_Wh_per_kg=200):
+                    n_p=0, c_p=0, g=0, A=0, e=0, CD0=0,
+                    battery_power_available=0, battery_specific_energy_Wh_per_kg=200):
         
         # Requirements input
         self.payload_weight_kg = payload_weight_kg
         
         # Battery inputs
-        self.battery_energy_required_Wh = battery_energy_required_Wh
+        self.battery_power_available = battery_power_available
         self.battery_specific_energy_Wh_per_kg = battery_specific_energy_Wh_per_kg
-        self.battery_mass_kg = (battery_energy_required_Wh / battery_specific_energy_Wh_per_kg) if battery_specific_energy_Wh_per_kg > 0 else 0
+        self.battery_mass_kg = (battery_power_available / battery_specific_energy_Wh_per_kg) if battery_specific_energy_Wh_per_kg > 0 else 0
         
         # Inputs for first weight estimation
         self.fuel_fraction = 1 - (W1_WTO * W2_W1 * W3_W2 * W4_W3 * W5_W4 * W6_W5 * W7_W6 * W8_W7 * Wfinal_W8)
@@ -46,8 +46,7 @@ class Class_I_Weight_Estimation():
         self.g = g
         self.A = A
         self.e = e
-        self.C_D_0 = C_D_0
-        self.V_cruise = V_cruise
+        self.CD0 = CD0
         
         self.results = {}
         self.converged = False
@@ -79,6 +78,7 @@ class Class_I_Weight_Estimation():
             self.estimated_fuel_weight = self.MTOW_kg * self.fuel_fraction * self.g
             
             self.results["Maximum Take-off Weight [kg]"] = round(self.estimated_MTOM, 3)
+            self.results["Estimated Weight [N]"] = round(self.estimated_MTOM * self.g, 3)
             self.results["Operation Empty Weight [kg]"] = round(self.estimated_OEM, 3)
             self.results["Fuel Weight [kg]"] = round(self.estimated_fuel_mass, 3)
             self.results["Battery Mass [kg]"] = round(self.battery_mass_kg, 3)
@@ -96,20 +96,14 @@ class Class_I_Weight_Estimation():
             self.results["Maximum Landing Weight [kg]"] = round(mlw, 3)
     
     def Determine_Maximum_Lift_Drag_Ratio(self):
-        self.L_D = np.sqrt((np.pi * self.A * self.e) / (4 * self.C_D_0))
+        self.L_D = np.sqrt((np.pi * self.A * self.e) / (4 * self.CD0))
     
     def Determine_Brequet_Range(self):
         self.Determine_Maximum_Lift_Drag_Ratio()
-        self.Range_Brequet = (self.n_p / (self.c_p * self.g)) * self.L_D * np.log(self.MTOW_kg / (self.MTOW_kg - self.W_f_used))
+        self.Range_Brequet = (self.n_p / (self.c_p * self.g)) * self.L_D * np.log(self.estimated_MTOM / (self.estimated_MTOM - self.W_f_used))
         self.results["Estimated Range [km]"] = round(self.Range_Brequet, 3)
     
-    def Determine_Brequet_Endurance(self):
-        self.Determine_Maximum_Lift_Drag_Ratio()
-        self.Endurance_Brequet = (self.n_p / (self.V_cruise * self.c_p * self.g)) * self.L_D * np.log(self.MTOW_kg / (self.MTOW_kg - self.W_f_used))
-        self.results["Estimated Endurance [s]"] = round(self.Endurance_Brequet, 3)
-    
     def __str__(self):
-        self.results["Estimated Weight [N]"] = round(self.estimated_MTOM * self.g, 3)
         output = ["Class I Weight Estimation Results:\n"]
         max_key_length = max(len(key) for key in self.results.keys())
         header = f"{'Parameter'.ljust(max_key_length)} | Value"
@@ -121,37 +115,7 @@ class Class_I_Weight_Estimation():
         
         return "\n".join(output)
     
-    def Plot_Payload_Range_Diagram(self):
-        MTOW = self.estimated_MTOW
-        OEW = self.estimated_OEW
-        Fuel = self.estimated_fuel_mass
-        Battery = self.battery_mass_kg
-        Payload_max = MTOW - OEW - Fuel - Battery
-        MZFW = OEW + Payload_max + Battery
-
-        range_A = 0
-        payload_A = Payload_max
-        range_B = self.Range_Brequet
-        payload_B = Payload_max
-
-        Range_max_fuel_only = (self.n_p / (self.c_p * self.g)) * self.L_D * np.log(MTOW / OEW)
-        range_C = Range_max_fuel_only
-        payload_C = 0
-
-        plt.figure(figsize=(10,6))
-        plt.plot([range_A, range_B, range_C], [payload_A, payload_B, payload_C], marker='o', label='Payload-Range Curve')
-        plt.axhline(OEW, color='gray', linestyle='--', label='OEW')
-        plt.axhline(MTOW, color='red', linestyle='--', label='MTOW')
-        plt.axhline(self.results.get("Maximum Landing Weight [kg]", 0), color='purple', linestyle='--', label='MLW')
-        plt.axhline(MZFW, color='green', linestyle='--', label='MZFW')
-
-        plt.xlabel("Range [km]")
-        plt.ylabel("Payload [kg]")
-        plt.title("Payload-Range Diagram")
-        plt.legend()
-        plt.grid(True)
-        plt.tight_layout()
-        plt.show()
+    
 
 
 if __name__ == "__main__":
@@ -177,17 +141,16 @@ if __name__ == "__main__":
         Wfinal_W8  = 1, #0.997,
         
         # Battery additions
-        battery_energy_required_Wh        = 20000, # 10 kWh battery
+        battery_power_available           = 20000, # 10 kWh battery
         battery_specific_energy_Wh_per_kg = 435,   # Li-ion (200 Wh/kg)
         
         # Properties for range and endurance
-        #n_p        = 0.82,
-        #c_p        = 0.3,
-        g           = 9.80665,
-        #A          = 25,
-        #e          = 0.9,
-        #C_D_0      = 0.020,
-        #V_cruise   = 25,
+        n_p        = 0.82,
+        c_p        = 0.3,
+        g          = 9.80665,
+        A          = 25,
+        e          = 0.9,
+        CD0        = 0.020,
     )
     
     print(Class_I_Weight_Estimate)

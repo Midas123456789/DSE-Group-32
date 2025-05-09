@@ -14,7 +14,7 @@ class AircraftAerodynamic(Aerodynamic):
 
     @property
     def rho(self):
-        return self.altitude_data[self.altitude]["Density [kg/m³]"]
+        return self.altitude_data[self.altitude]["Density [kg/m3]"]
     
     @property
     def a(self):
