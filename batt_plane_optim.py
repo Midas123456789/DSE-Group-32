@@ -5,19 +5,28 @@ from mass_wing import Mass_wing
 
 
 wing_airfoil = asb.Airfoil("sd7037")
-N_cords = 5
+N_cords = 3
 g = 9.81
 payload_mass = 500  #kg
 Wp = payload_mass * g
 altitude = 15000
 ribs = 10
 skin_density = 0.220 #kg/m2
+Ppl = 5000
+
+propeller_eff = 0.8
+motor_eff = 0.8
+prop_eff = propeller_eff * motor_eff
+
+battery_days = 300
+battery_cost = 20 #$/kg
+
 atm = asb.Atmosphere(altitude=altitude)
 opti = asb.Opti()
 
 
 cords = opti.variable(init_guess=8 * np.ones(N_cords), n_vars=N_cords)
-b = opti.variable(init_guess=40, upper_bound=50, lower_bound=0)
+b = opti.variable(init_guess=40, upper_bound=70, lower_bound=0)
 V = opti.variable(init_guess=30, upper_bound=200, lower_bound=40)
 # Define y-locations based on variable b
 y_sections = np.linspace(0, b / 2, N_cords)
@@ -62,8 +71,8 @@ vlm = asb.VortexLatticeMethod(
 
 aero = vlm.run()
 
-Pg = wing.area() * 0.2 * 500 * 0.5
-Pr = 0.5 * atm.density() * V**2 * wing.area() * aero['CD'] * V
+Pg = wing.area() * 0.2 * 700 * 0.5
+Pr = 0.5 * atm.density() * V**2 * wing.area() * aero['CD'] * V + Ppl
 bat_energy_density = 576000
 night_energy = Pr * 0.5 * 86400
 Mbat = night_energy / bat_energy_density
@@ -72,13 +81,11 @@ Wbat = Mbat * g
 Mskin = 2 * wing.area() * skin_density
 Wskin = Mskin * g
 opti.subject_to(
-    Pg > Pr
+    Pg * prop_eff > Pr
 )
 
 # Objective: Minimize drag power (drag force * velocity)
-opti.minimize(
-    Pr
-)
+
 
 
 L = 0.5 * atm.density() * V**2 * aero['CL'] * wing.area()
@@ -95,7 +102,9 @@ opti.subject_to(
     L > W
 )
 
-
+opti.minimize(
+    W
+)
 sol = opti.solve()
 
 # Print results
@@ -134,6 +143,10 @@ print("Mass bat =", sol(Mbat))
 print("Mass skin =", sol(Mskin))
 print("Wing loading Kg/m2 =", sol(W) / g / sol(wing.area()))
 
+print('=== COST ===')
+batt_mass = sol(Mbat)
+batt_cost = 365 / battery_days * batt_mass * battery_cost
+print("batt cost / year ", batt_cost)
 
 # Visualize
 vlm = sol(vlm)

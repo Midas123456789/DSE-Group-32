@@ -1,4 +1,4 @@
-import aerosandbox.numpy as np
+import numpy as np
 import matplotlib.pyplot as plt
 
 class Power:
@@ -7,7 +7,7 @@ class Power:
     based on location, date, and system parameters.
     """
 
-    def __init__(self, latitude: float, day_of_year: int, area: float, power_required=None, max_irradiance: float = 1300, efficiency: float = 0.3):
+    def __init__(self, latitude: float, day_of_year: int, area: float, power_required=None, max_irradiance: float = 1000, efficiency: float = 0.2):
         """
         Initialize the Power model.
 
@@ -28,7 +28,7 @@ class Power:
         self.area = area
         self.irradiance = self._compute_irradiance() 
         self.power_required = (
-            np.array(power_required) / area if power_required is not None
+            np.array(power_required) if power_required is not None
             else np.zeros(self.seconds_in_day)
         )
 
@@ -76,7 +76,7 @@ class Power:
         elevation = self._solar_elevation()
         raw_irradiance = self.max_irradiance * np.sin(elevation)
         raw_irradiance[elevation <= 0] = 0
-        return raw_irradiance 
+        return raw_irradiance * self.area
 
     def power_generated(self):
         """
@@ -85,7 +85,7 @@ class Power:
         Returns:
             ndarray: Power generated (in W) at each second.
         """
-        return self.irradiance * self.efficiency 
+        return self.irradiance * self.efficiency
 
     def net_power(self):
         """
@@ -113,7 +113,7 @@ class Power:
             float or None: Maximum net energy (J), or None if no surplus.
         """
         net = self.net_energy()
-        return net.max() * self.area
+        return net.max() if net.max() > 0 else None
 
     def max_deficit(self):
         """
@@ -123,7 +123,7 @@ class Power:
             float or None: Minimum net energy (J), or None if no deficit.
         """
         net = self.net_energy()
-        return net.min() * self.area
+        return net.min() if net.min() < 0 else None
     
     def plot_power_profiles(self):
         """
@@ -156,42 +156,6 @@ class Power:
 
         plt.tight_layout()
         plt.show()
-
-
-
-def night_length(latitude, day_of_year):
-    """
-    Calculate the length of the night (in seconds) for a given day of the year at a specific latitude.
-    
-    :param latitude: Latitude of the observer in degrees.
-    :param day_of_year: Day of the year (1 to 365).
-    
-    :return: Length of the night in seconds.
-    """
-    # Solar declination (δ) calculation
-    declination = 23.44 * np.sin(np.deg2rad(360 * (day_of_year + 10) / 365))
-    
-    # Convert latitude and declination to radians
-    latitude_rad = np.deg2rad(latitude)
-    declination_rad = np.deg2rad(declination)
-    
-    # Calculate the hour angle (H) at sunrise/sunset
-    try:
-        hour_angle = np.arccos(-np.tan(latitude_rad) * np.tan(declination_rad))
-    except ValueError:
-        # For polar regions where the sun is always above or below the horizon
-        return 0 if abs(latitude) > 66.5 else 86400  # 24 hours of night or no night
-    
-    # Calculate the length of the day in hours (2 * hour angle / 15° per hour)
-    day_length_hours = (2 * hour_angle) / np.deg2rad(15)
-    
-    # Length of the night in hours
-    night_length_hours = 24 - day_length_hours
-    
-    # Convert night length from hours to seconds
-    night_length_seconds = night_length_hours * 3600
-    
-    return night_length_seconds
 
 
 if __name__ == "__main__":
