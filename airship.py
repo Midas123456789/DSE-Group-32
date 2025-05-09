@@ -1,4 +1,5 @@
 import math
+from scipy.optimize import fsolve, fmin
 
 class Airship:
     def __init__(self, FR, volume, lobes, velocity, altitude):
@@ -29,6 +30,8 @@ class Airship:
         self.NL = 2.4               # find out, it is a number according to number of lobes
         self.gas_density =  0.0646 #lb/ft3 for helium at sea level
         self.fuelres = 1251        #find out later
+        self.efficienty_eng = 0.65
+
         self.payload = 40000
         #self.length = length
         #self.n_eng = n_eng
@@ -137,9 +140,14 @@ class Airship:
 
     def fuel_calculations(self):
 
-        self.wland = 145073
-        self.wh1 = 43522
-        self.wh0 = 68545
+
+        self.range = 1000
+        self.BSFC = 0.48
+        self.wland = self.wzf + self.fuelres
+        self.wh1 = self.wland-self.buoyancy
+        self.A = (326 * self.efficienty_eng) / (self.BSFC * (self.K * self.CD0) ** 0.5)
+        self.B = self.q * self.reference_volume * (self.CD0/ self.K) ** 0.5
+        self.wh0 = self.B*math.tan((self.range/self.A)+math.atan(self.wh1/self.B))
         self.fuel_total = self.wh0-self.wh1+self.fuelres
         return self.fuel_total
 
@@ -178,7 +186,6 @@ class Airship:
         """
 
         # 550 = 550 ft-lbf/s = 1 hp
-        self.efficienty_eng = 0.65
         self.n = 10
         #self.D_maxpower = 13346
         self.P_hp_per_engine = ((self.D_maxpower * self.vmax) / (self.n_engines * self.efficienty_eng)) / 550  # power required per engine in hp
@@ -232,9 +239,66 @@ class Airship:
 
         return self.q_hull
 
-    def print(self):
-        return (f"Airship(FR={self.FR}, AR={self.AR}, volume={self.volume} m³, de={self.de} m, "
-                f"length={self.length} m, dc={self.dc} m")
-    
-1
+    def ballonet(self):
+
+        self.vball = self.volume*((1/(self.density_maxh/self.density_sl)-1))
+        self.nball = 6
+        self.surfaceballonet = math.pi*(3*self.vball/math.pi/6)**(2/3)*self.nball
+        self.W_ball = 0.035*self.surfaceballonet
+
+        self.faf = 1.26
+        self.W_ssf = (self.surface_ht+self.surface_vt)*self.faf*0.8
+        self.W_cs = (self.surface_ht+self.surface_vt)*0.2
+        self.W_tails = self.W_ssf + self.W_cs
+        self.W_act = 1.15*(self.surface_ht+self.surface_vt)*0.79*0.2
+
+        self.W_crewstat = 1426
+        self.W_gond = 1.875*2*(55*10+55*10+10*10)
+        self.W_eng = self.n_engines*4.848*(self.P_hp_per_engine)**0.7956
+        self.W_eng_mount = 0.64*self.W_eng
+        self.W_ec = 60.27*(150*self.n_engines/100)**0.724
+        self.W_start = 98
+
+        self.Kp = 31.92
+        self.nblades = 3
+        self.W_prop = self.Kp*self.n_engines*(self.nblades)**0.391*(self.D_prop*self.P_hp_per_engine/1000)**0.782
+        self.W_fueltank = 2.49*(self.fuel_total/6)**0.6*(2)**0.2*self.n_engines**0.13
+        self.W_pressuresys = 0.02*self.woe
+
+        self.W_acls = 1.6*4057
+        self.W_vms = 1493
+        self.W_Elect = 33.73*(470+500)**0.51
+        self.W_Msys = 0.05*self.woe
+        self.W_crew = 1148
+        self.W_fuel = 0.01*self.fuel_total
+        self.W_margin = 0.06*self.woe
+        self.W_both = self.W_fuel + self.W_margin
+        self.woe2 = self.W_body+self.W_ball+self.W_tails +self.W_crewstat+self.W_gond+self.W_eng+self.W_eng_mount+self.W_ec+self.W_start+self.W_prop+self.W_fueltank+self.W_pressuresys+self.W_acls+self.W_vms+self.W_Elect+self.W_Msys+self.W_crew+self.W_both
+        self.W_g2 = self.woe2+self.fuel_total+self.payload
+
+        return
+    def iterator(self,Volume):
+        self.volume = Volume
+        self.geomertic_parameters()
+        self.tailvolume()
+        self.aerodynamic_properties()
+        self.buoyant_lift()
+        self.prelimanary_weight()
+        self.fuel_calculations()
+        self.weight_calculations()
+        self.calculate_lift()
+        self.engine()
+        self.further_weight()
+        self.ballonet()
+        #print(self)
+        return abs(self.wg - self.W_g2)
+    def iterate_to_exact(self):
+        #fsolve(self.iterator,2000000,xtol=1e-3)
+        fmin(self.iterator,2e6)
+        return
+
+    def __str__(self):
+        return (f"Airship(volume={self.volume} ft³, wg ={self.wg} lb, wg2={self.W_g2} lb, difference= {self.wg - self.W_g2}")
+               # f"length={self.length} m, dc={self.dc} m")
+
     
