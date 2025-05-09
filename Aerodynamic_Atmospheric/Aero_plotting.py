@@ -55,29 +55,33 @@ def plot_A_LD(aircraft, CL_list):
 
 def plot_P_V():
     Vrange = np.arange(10, 100, 1)
+    hrange = np.arange(0, 30000, 5000)
 
-    P_lst = []
-    for V in Vrange:
-        aircraft = AircraftAerodynamic(W=4000, h=15000, V=V, S=30, A=25, e=0.7, CD0=0.04, CL=1.2
-        )
-        rho = aircraft.rho
-        V = aircraft.V
-        D = aircraft.Drag()
+    for h in hrange:
+        P_lst = []
+        P2_lst = []
+        P3_lst = []
+        for V in Vrange:
+            aircraft = AircraftAerodynamic(W=4000, h=h, V=V, S=30, A=25, e=0.7, CD0=0.04, CL=1.2
+            )
+            rho = aircraft.rho
+            V = aircraft.V
+            D = aircraft.Drag()
 
-        P = sweep_propeller_radius(asb=asb, D=D, rho=rho, v_o=V)[1]
+            P = sweep_propeller_radius(asb=asb, D=D, rho=rho, v_o=V)[1]
+            P2 = 0.5 * rho * (V ** 3) * aircraft.S * aircraft.CD
 
-        if V == 20 or V == 50:
-           specialpower = P
-           otherpower = np.sqrt(2*aircraft.weight**3*aircraft.CD**2/(aircraft.S*aircraft.rho*aircraft.CL**3))
-           Drag = D
-           Mach = aircraft.M
-           CD = aircraft.CD
-        P_lst.append(P)
+            P_lst.append(P)
+            P2_lst.append(P2)
+        
+        plt.plot(Vrange, np.array(P_lst)/1000, label=f'Power vs Velocity (Rotor) at {h} m')
+        plt.plot(Vrange, np.array(P2_lst)/1000, label=f'Power vs Velocity (Aerodynamic) at {h} m', linestyle='--')
+
+
 
 
 
     plt.figure(figsize=(10, 6))
-    plt.plot(Vrange, np.array(P_lst)/1000, label='Power vs Velocity')
     plt.xlabel('Velocity (m/s)')
     plt.ylabel('Power (kW)')
     # plt.title(f'Power vs Velocity\nAltitude: {h} m | Weight: {aircraft.weight} N')
@@ -85,14 +89,72 @@ def plot_P_V():
     plt.legend()
     plt.tight_layout()
     plt.show()
-    print('hello')
-    print(specialpower)
-    print(otherpower)
-    print(Drag)
-    print(Mach)
-    print(CD)
-    print(Vrange)
+
+def plot_h_V():
+    altitude_range = np.arange(0, 30000, 100)
+    Vmin = []
+    for h in altitude_range:
+        aircraft = AircraftAerodynamic(W=6000, h=h, V=0, S=30, A=25, e=0.7, CD0=0.04, CL=1.2)
+        rho = aircraft.altitude_data[h]["Density [kg/m³]"]
+        Vmin.append(np.sqrt((2 * aircraft.weight) / (rho * aircraft.S * aircraft.CL)))
+
+    Vmax = []
+    Pmax = 2000 # Watts
+    for h in altitude_range:
+        aircraft = AircraftAerodynamic(W=6000, h=h, V=0, S=30, A=25, e=0.7, CD0=0.04, CL=1.2)
+        rho = aircraft.altitude_data[h]["Density [kg/m³]"]
+        CD = aircraft.drag_polar()
+        Vmax.append((Pmax*2/(rho*aircraft.S*CD))**(1/3))
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(Vmin, altitude_range, label='Min Speed')
+    plt.plot(Vmax, altitude_range, label='Max Speed')
+    plt.xlabel('Velocity (m/s)')
+    plt.ylabel('Altitude (m)')
+    plt.title(f'Altitude vs Velocity\nWeight: {aircraft.weight} N')
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
 
 
+def plot_h_W():
+    h_list = np.arange(0, 30000, 100)
+    W_lst = []
+    V_lst = []
 
+    for h in h_list:
+        aircraft = AircraftAerodynamic(W=4000, h=h, V=0, S=30, A=20, e=0.7, CD0=0.04, CL=1.2)
 
+        for i in range(0, 100):
+            aircraft.V = aircraft.min_velocity()
+            D = aircraft.Drag()
+            Preq = D * aircraft.V
+            Wbat = calculate_W_bat(Preq)
+            aircraft.weight = calculate_W(Wbat)
+        if aircraft.weight != float('inf'):
+            W_lst.append(aircraft.weight)
+            V_lst.append(aircraft.V)
+        else:
+            W_lst.append(0)
+            V_lst.append(0)
+
+    plt.plot(h_list, W_lst, label='Weight vs Altitude')
+    plt.xlabel('Altitude (m)')
+    plt.ylabel('Weight (N)')
+    plt.ylim(0, 20000)
+    plt.title('Weight vs Altitude')
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+def calculate_W_bat(P):
+# Assume 18kW payload
+# Assume 8 hour night
+# Assume 450Wh/kg battery
+    return ((P + 18000) * 8 / 435)*9.81
+
+def calculate_W(Wbat):
+    # Assume 100 kg payload
+    # Assume 1/10 payload structure weight
+    return Wbat + 10*100

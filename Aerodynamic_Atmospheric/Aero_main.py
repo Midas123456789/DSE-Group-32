@@ -1,16 +1,24 @@
 # main.py
 from Aircraft_Aerodynamics import AircraftAerodynamic
-from Aero_plotting import plot_feasible_S_V, plot_A_LD, plot_h_V, plot_P_V
-from Aero_optim import optimize_velocity_for_min_drag, optimize_altitude_for_min_drag, parameter_sweep, determine_states_altitude
+from Aero_plotting import plot_feasible_S_V, plot_A_LD, plot_h_V, plot_P_V, plot_h_V, plot_h_W
+from Aero_optim import optimize_velocity_for_min_drag, optimize_altitude_for_min_drag, parameter_sweep, determine_states_altitude, calculate_W, calculate_W_bat
 from Power_calculation import sweep_propeller_radius
 import numpy as np
+from math import inf
 import aerosandbox as asb
 import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
-    # aircraft = AircraftAerodynamic(W=4000, h=20000, V=20, S=30, A=12, e=0.9, CD0=0.1, CL=2)
+
+
+
+
+    
+
 
     plot_P_V()
+    plot_h_V()
+    plot_h_W()
 
     # states = determine_states_altitude(aircraft, np.arange(0, 30000, 100))
     # for i, state in enumerate(states):

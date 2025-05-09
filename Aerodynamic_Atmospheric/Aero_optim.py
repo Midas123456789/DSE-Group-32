@@ -54,3 +54,6 @@ def parameter_sweep(aircraft, CL_list, V_range, S_range):
                 L = aircraft.Lift()
                 results.append((CL, V, S, D, L))
     return results
+
+
+

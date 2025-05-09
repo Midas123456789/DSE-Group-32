@@ -138,7 +138,7 @@ def sweep_propeller_radius(asb, D, rho, v_o, r_min=0.75, r_max=6, r_step=0.05):
     }
 
 
-aircraft = AircraftAerodynamic(W=4000, h=15000, V=50, S=30, A=25, e=0.7, CD0=0.04, CL=1.2
+aircraft = AircraftAerodynamic(W=6000, h=15000, V=20, S=30, A=25, e=0.7, CD0=0.04, CL=1.2
         )
 
 D = aircraft.Drag()
@@ -146,4 +146,5 @@ rho = aircraft.rho
 v_o = aircraft.V
 
 results = sweep_propeller_radius(asb=asb, D=D, rho=rho, v_o=v_o)
+print(D, rho, v_o)
 print(results)
