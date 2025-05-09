@@ -58,6 +58,23 @@ class WP_WS_Diagram:
             results.append((W_P_range, W_S_range, CL_TO))
         
         return results
+
+    def climb_loading(self, CL_TO_list=None, rho=1.225):
+        """
+        Calculate W/P vs W/S curves for an array of CL_TO values.
+        """
+        if CL_TO_list is None:
+            CL_TO_list = [self.CL_max_TO / (1.1 ** 2)]
+        
+        W_S_range = np.linspace(1, self.x_max, 1000)
+        results = []
+        
+        for CL_TO in CL_TO_list:
+            effective_CL = CL_TO / (1.1 ** 2)
+            W_P_range = (self.TOP / W_S_range) * effective_CL * (rho/ self.rho0)
+            results.append((W_P_range, W_S_range, CL_TO))
+        
+        return results
     
     def landing_loading(self, CL_max, rho=1.225):
         """Calculate Wing Loading for given velocity and maximum lift coefficient in landing phase"""
@@ -162,8 +179,8 @@ if __name__ == "__main__":
         f              = 1,     # Weight fraction (fuel)
         
         # Velocity
-        V_cruise       = 15,    # Pre-given cruise speed
-        V_stall        = 12,    # Pre-given stall speed
+        V_stall        = 25,    # Pre-given stall speed
+        V_cruise       = 25 * 1.1,    # Pre-given cruise speed
         
         # Design pre-set values
         TOP              = 150, # Take-off parameter (see ADSEE graph with take-off distance)
@@ -171,8 +188,8 @@ if __name__ == "__main__":
         
         # Test variables
         CL_MAX_clean   = [1.7], # Possible clean CL
-        CL_MAX_TO      = [1.9], # Possible take-off CL
-        CL_MAX_land    = [2.2], # Possible landing CL 
+        CL_MAX_TO      = [2.2], # Possible take-off CL
+        CL_MAX_land    = [2.3], # Possible landing CL 
         prop_setting   = [1.0], # Different output settings of the propellor
         
         # Propulsion
