@@ -57,15 +57,15 @@ class Vehicle:
         # Calculate required ground velocity components in decimal degrees per second
         time_to_target = distance_m / self.desiredvelocity  # Approximate time
 
-        u_flightspeed = self.desiredvelocity*math.sin(bearing_to_target_rad) + wind_u
-        v_flightspeed = self.desiredvelocity*math.cos(bearing_to_target_rad) + wind_v
+        u_flightspeed = -self.desiredvelocity*math.cos(bearing_to_target_rad) - wind_u
+        v_flightspeed = self.desiredvelocity*math.sin(bearing_to_target_rad) - wind_v
         self.ground_speed = math.sqrt(u_flightspeed**2 + v_flightspeed**2) # Calculate ground speed
 
         if self.ground_speed <= self.maxvelocity:
             # We can achieve the desired ground velocity
 
-            self.position_dd[0] += (u_flightspeed / self.longitudinalconvert) * (time_to_target/1000)
-            self.position_dd[1] += (v_flightspeed / self.lateralconvert) * (time_to_target/1000)
+            self.position_dd[0] += (u_flightspeed / self.longitudinalconvert)
+            self.position_dd[1] += (v_flightspeed / self.lateralconvert)
 
         else:
             # Fly at max airspeed towards the target
@@ -74,10 +74,10 @@ class Vehicle:
 
             u_flightspeed = max_airspeed_u + wind_u
             v_flightspeed = max_airspeed_v + wind_v
-            ground_speed = math.sqrt(u_flightspeed ** 2 + v_flightspeed ** 2)
+            self.ground_speed = math.sqrt(u_flightspeed ** 2 + v_flightspeed ** 2)
 
-            self.position_dd[0] += (u_flightspeed / self.longitudinalconvert) * (time_to_target/1000)
-            self.position_dd[1] += (v_flightspeed / self.lateralconvert) * (time_to_target/1000)
+            self.position_dd[0] += (u_flightspeed / self.longitudinalconvert)
+            self.position_dd[1] += (v_flightspeed / self.lateralconvert)
         return  self.position_dd, self.ground_speed
 
     def vehicle_data(self, identifier, target_position):
@@ -93,17 +93,19 @@ class Vehicle:
         return df.set_index('identifier')
 
 
+
+
 # Example usage with DD:
-wind = [55, -10]  # Wind blowing at 5 m/s eastward
-start_position_dd = [4.21 / 60 + 4, 52 + 0.0016666666666666668]  # Delft: 4.350, 52.01
-target_position_dd = [4 + 54/60, 52 + 22/60 + 12/3600] # Amsterdam:  4.9, 52.37
+wind = [20, -13]  # Wind blowing at 5 m/s eastward
+start_position_dd = [4.350, 52.01]  # Delft: 4.350, 52.01
+target_position_dd = [4.9, 52.37] # Amsterdam:  4.9, 52.37
 vehicle_dd = Vehicle(wind, 10, start_position_dd)
 
-for _ in range(10000):
+for _ in range(1000):
     current_position_dd = vehicle_dd.trajectory(target_position_dd)
     lon_dd, lat_dd = current_position_dd
     print(vehicle_dd.vehicle_data("01", target_position_dd))
     #print(f"Current Position (DD): {lon_dd:.6f} E, {lat_dd:.6f} N")
-    if np.linalg.norm(vehicle_dd.position_dd - np.array(target_position_dd)) < 0.5:
+    if np.linalg.norm(vehicle_dd.position_dd - np.array(target_position_dd)) < 0.001:
         print("Reached target (DMS)!")
         break
