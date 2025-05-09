@@ -26,8 +26,10 @@ class Airship:
         self.density_maxh = 0.7860*self.density_sl
         self.mu = 3.66*10**-7               # find out
         self.n_engines = 4
-        self.NL = 2.4               # find out
+        self.NL = 2.4               # find out, it is a number according to number of lobes
         self.gas_density =  0.0646 #lb/ft3 for helium at sea level
+        self.fuelres = 1251        #find out later
+        self.payload = 40000
         #self.length = length
         #self.n_eng = n_eng
         #self.payload = payload
@@ -35,6 +37,7 @@ class Airship:
         #self.volume2_3 = self.volume ** (2 / 3)
 
         #Parameters for hybrid n_lobes >1
+
     
     def geomertic_parameters(self):
         """
@@ -123,12 +126,111 @@ class Airship:
 
         """
         self.buoyancy= self.gas_density*self.volume*self.density_maxh/self.density_sl
+        self.BR = 0.7   #self.buoyancy/self.Wg
         return self.buoyancy
     
-    def weight(self):
-        
-        
-        return
+    def prelimanary_weight(self):
+
+        self.wzf = self.buoyancy/self.BR-self.fuelres
+        self.woe = self.wzf-self.payload
+        return self.wzf, self.woe
+
+    def fuel_calculations(self):
+
+        self.wland = 145073
+        self.wh1 = 43522
+        self.wh0 = 68545
+        self.fuel_total = self.wh0-self.wh1+self.fuelres
+        return self.fuel_total
+
+    def weight_calculations(self):
+        self.wg = self.wzf+self.fuel_total
+        self.br_takeoff = self.buoyancy/self.wg
+        return self.wg, self.br_takeoff
+
+    # Exercise/Line 19
+    def calculate_lift(self):
+        """
+        Calculate the lift force of the airship based on the weight of the airship and the buoyancy force.
+        Inputs: WHO (float): weight of airship in lbf
+        Outputs: lift (float): lift force in lbf
+        """
+        self.L_a = self.wh0
+        self.density_sea = 0.002377
+        #self.K = 0.295
+        self.vmax = 1.1*self.velocity
+        self.qmax = 0.5 * self.density_sea * (self.vmax)**2  # dynamic pressure in lbf/ft²
+        self.CL_maxpower = self.wh0 / (self.qmax * self.reference_volume)  # lift coefficient at maximum power
+        self.D_maxpower = (self.CD0 + self.K * self.CL_maxpower ** 2) * self.qmax * self.reference_volume  # drag force at maximum power in lbf
+
+        return self.L_a, self.qmax, self.CL_maxpower, self.D_maxpower
+
+    # Exercise/Line 22
+    def engine(self):
+        """
+        Calculate the power required per engine at maximum velocity.
+        Inputs: Vmax (float): maximum velocity of the airship in ft/s
+                D_maxpower (float): drag force at maximum power in lbf
+                n_eng (float): engine efficiency [dimensionless]
+                NE (int): number of engines [#]
+        Outputs: P_per_engine (float): power required per engine in hp
+
+        """
+
+        # 550 = 550 ft-lbf/s = 1 hp
+        self.efficienty_eng = 0.65
+        self.n = 10
+        #self.D_maxpower = 13346
+        self.P_hp_per_engine = ((self.D_maxpower * self.vmax) / (self.n_engines * self.efficienty_eng)) / 550  # power required per engine in hp
+        self.P = self.P_hp_per_engine * 550  # Convert power from hp to ft-lbf/s
+        self.C_S = ((self.density_sea * self.velocity ** 5) / (self.P * self.n ** 2)) ** (1 / 5)  # speed coefficient [dimensionless]
+        self.J = 0.156 * self.C_S ** 2 + 0.241 * self.C_S + 0.138  # propeller advance ratio [dimensionless]
+        self.D_prop = self.velocity / (self.J * self.n)  # propeller diameter in ft
+        self.eta_prop = 0.139 * self.C_S ** 3 - 0.749 * self.C_S ** 2 + 1.37 * self.C_S + 0.0115  # propeller efficiency [dimensionless]
+
+
+        return self.P_hp_per_engine
+
+
+    # Exercise/Line 27
+    def further_weight(self):
+        """
+        Calculate the hull fabric load based on the safety factor, internal pressure, and radius of the hull.
+        Inputs: FS (float): safety factor [dimensionless]
+                P_int (float): internal pressure in psi
+                height (float): height of the hull in ft
+        Outputs: q_hull (float): hull fabric load in lb/in
+                q for shear flow in lb/in
+
+        """
+        self.P_int = (1.2 * self.qmax + 0.0635 * self.ht)  # internal pressure in lbf/ft²
+        self.P_int = self.P_int / 144  # Convert from lbf/ft² to psi
+        self.height_inches = self.ht * 12  # Convert height from ft to inches
+        # NOTE 1 ft = 12 inches
+        self.FS = 4  # factor of safety
+        self.q_hull = self.FS * self.P_int * (self.height_inches / 2)  # hull fabric load in psi
+
+        material_strengths = {
+            'Polyester (weave)': {'a': 0.0453, 'b': 1.962},
+            'Vectran (weave)': {'a': 0.0141, 'b': 1.882},
+            'Vectran (laminate)': {'a': 0.0085, 'b': 1.365},
+            'Dyneema (laminate)': {'a': 0.0063, 'b': 0.889},
+            'material': {'a': 0.0085, 'b': 1.365}
+        }
+
+        # Linear relationship calculation using coefficients a and b
+        a = material_strengths['material']['a']
+        b = material_strengths['material']['b']
+        self.w_hull = a * self.q_hull + b
+
+        # NOTE 16 oz = 1 lb, 1 yd² = 9 ft², 1.2 = manufacturing factor, 1.26 = attachements factor
+        self.W_envelope = self.w_hull * self.wetsurface * 1.2 * 1.26 / (16 * 9)  # conversion to lbf/ft²
+
+        self.f_septum = a * (1.5 * self.q_hull) + b
+        self.W_septum = 2*1.06*self.f_septum*0.75*math.pi*self.ht*self.length/4/16/9
+        self.W_body = self.W_envelope + self.W_septum
+
+        return self.q_hull
 
     def print(self):
         return (f"Airship(FR={self.FR}, AR={self.AR}, volume={self.volume} m³, de={self.de} m, "
