@@ -7,7 +7,7 @@ class Power:
     based on location, date, and system parameters.
     """
 
-    def __init__(self, latitude: float, day_of_year: int, area: float, power_required=None, max_irradiance: float = 1000, efficiency: float = 0.2):
+    def __init__(self, latitude: float, day_of_year: int, area: float, power_required=None, max_irradiance: float = 1300, efficiency: float = 0.3):
         """
         Initialize the Power model.
 

@@ -1,6 +1,6 @@
 import aerosandbox as asb
 import aerosandbox.numpy as np
-from test import Mass_wing
+from mass_wing import Mass_wing
 
 
 wing_airfoil = asb.Airfoil("sd7037")
