@@ -5,15 +5,16 @@ from aerosandbox import Atmosphere
 
 # Inputs
 #Design variables
-W = 10000  # Weight [N]
-D = 400    # Drag [N]
+W = 7000  # Weight [N]
+D = 0.05*W    # Drag [N]
 V = 40     # Speed [m/s]
 
 #Mission variables
 h_target = 18000  # Target altitude [m]
 night_time = 12  # [hr]
 day_time = 24 - night_time  # [hr]
-mission_hours = 72
+mission_days = 30
+mission_hours = mission_days * 24  # [hr]
 energy_margin = 1.05
 
 #Energy parameters
@@ -30,8 +31,8 @@ Maximum_possible_descend_altitude=14000
 opti = asb.Opti()
 
 T = opti.variable(init_guess=1.4 * D, lower_bound=D, upper_bound=0.5 * W)
-A = opti.variable(init_guess=100, lower_bound=50, upper_bound=400)
-b_capacity = opti.variable(init_guess=80000, lower_bound=40000, upper_bound=500000)
+A = opti.variable(init_guess=50, lower_bound=0, upper_bound=600)
+b_capacity = opti.variable(init_guess=80000, lower_bound=0, upper_bound=500000)
 h_difference = opti.variable(init_guess=1000, lower_bound=0, upper_bound=(h_target - Maximum_possible_descend_altitude))
 y = opti.variable(init_guess=0.1, lower_bound=0.01, upper_bound=0.2)
 
@@ -65,7 +66,7 @@ opti.subject_to(b_capacity >= E_night_Wh)
 opti.subject_to(solar_input_Wh >= E_day_total_Wh + E_night_Wh)
 
 # Objective
-opti.minimize(b_capacity)
+opti.minimize(A)
 
 
 sol = opti.solve()
@@ -125,10 +126,17 @@ for day in range(mission_hours // 24):
     altitude_profile.extend(h_vals)
     time_hr += t_cruise_night
 
+final_descent_time_hr = alt / (V * np.sin(y_opt)) / 3600  # time from current altitude to 0
+t_vals = np.linspace(0, final_descent_time_hr, 30)
+h_vals = np.linspace(alt, 0, 30)
+time_profile.extend(time_hr + t_vals)
+altitude_profile.extend(h_vals)
+time_hr += final_descent_time_hr
+
 # Plot
 plt.figure(figsize=(12, 6))
 plt.plot(time_profile, altitude_profile)
-plt.title("72-Hour Mission Profile: Altitude vs Time")
+plt.title(f"{mission_hours}-Hour Mission Profile: Altitude vs Time")
 plt.xlabel("Time [hr]")
 plt.ylabel("Altitude [m]")
 plt.grid(True)
@@ -138,9 +146,9 @@ plt.show()
 # Summary
 print("Battery capacity (Wh):", round(b_capacity_opt, 1))
 print("Battery weight (kg):", round(b_capacity_opt/energy_density_bat, 1))
-print("Battery weight percentage of MTOW:", round(MTOW/9.81-b_capacity_opt/energy_density_bat, 1))
+print("Battery weight percentage of MTOW %:", round(((b_capacity_opt/energy_density_bat)/(W/9.81))*100, 3))
 print("Solar panel area (m^2):", round(solar_area_opt, 1))
 print("Thrust (N):", round(thrust_opt, 1))
 print("Altitude difference during night descent (m):", round(h_difference_opt, 1))
-print("Climb angle (rad):", round(y_opt, 4))
+print("Decent angle (deg):", round(y_opt*180/np.pi, 4))
 print("Rate of climb (m/s):", round(RC_opt, 2))
