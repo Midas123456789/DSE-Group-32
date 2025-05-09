@@ -178,7 +178,7 @@ if __name__ == "__main__":
         # Properties for range and endurance
         #n_p        = 0.82,
         #c_p        = 0.3,
-        g          = 9.80665,
+        g           = 9.80665,
         #A          = 25,
         #e          = 0.9,
         #C_D_0      = 0.020,

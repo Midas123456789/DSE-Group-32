@@ -5,7 +5,6 @@ class ISA_Calculator:
     
     def __init__(self, altitude=0, velocity=0, length=0):
         # Constants
-        print(altitude)
         self.g0 = 9.80665
         self.R = 287.05287
         self.T0 = 288.15
