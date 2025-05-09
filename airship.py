@@ -1,5 +1,5 @@
 import math
-from scipy.optimize import fsolve, fminbound
+from scipy.optimize import fsolve, fmin
 from Aerodynamic_Atmospheric.ISA_Calculator import ISA_Calculator
 
 class Airship:
@@ -284,15 +284,12 @@ class Airship:
 
         return
     def iterator(self,Volume):
-        returner=-100
-        self.volume = Volume#[0]
+        self.volume = abs(Volume[0])
         self.geomertic_parameters()
         self.tailvolume()
         self.aerodynamic_properties()
         self.buoyant_lift()
         self.prelimanary_weight()
-        if self.wzf<self.payload:
-            returner= 1000000
         self.fuel_calculations()
         self.weight_calculations()
         self.calculate_lift()
@@ -300,10 +297,10 @@ class Airship:
         self.further_weight()
         self.ballonet()
         #print(self)
-        return abs(self.wg - self.W_g2) if returner <0 else returner
+        return abs(self.wg - self.W_g2)
     def iterate_to_exact(self):
         #fsolve(self.iterator,2000000,xtol=1e-3)
-        fminbound(self.iterator,0,self.volume*10)
+        fmin(self.iterator,self.volume)
         return
 
     def __str__(self):
