@@ -25,6 +25,7 @@ class RFC:
             return energy_kWh / self.vol_energy_density
         return 0
      
+     ''''
      def required_electrolysis_power(self, electrolyzer_efficiency=0.7):
        deficit = self.power_model.max_deficit()
        if deficit is None:
@@ -41,7 +42,8 @@ class RFC:
 
     # Required average power during daylight (in Watts)
        return energy_needed / daylight_seconds
-     
+     '''''
+
      def hydrogen_used(self):
          """
          Calculate the amount of hydrogen used in kg.
@@ -49,15 +51,18 @@ class RFC:
          # Get the total energy deficit in kWh
          energy_kWh = abs(self.power_model.max_deficit()) * 2.77e-7 / self.efficiency
          # Calculate the mass of hydrogen
-         mass_hydrogen = energy_kWh / self.energy_density_hydrogen
+         mass_hydrogen = energy_kWh / self.energy_density_hydrogen 
          return mass_hydrogen
      
-     
-     
-     
+     def required_electrolysis_power(self, electrolyzer_efficiency=0.7):
+         mass_hydrogen = self.hydrogen_used()
 
+         energy_required_electrolysis_kWh = mass_hydrogen * 39.4 / electrolyzer_efficiency
+         energy_required_electrolysis_W = energy_required_electrolysis_kWh * 3.6e6 / 86400  # Convert kWh to W and divide by seconds in a day
 
-     
+         return energy_required_electrolysis_W
+
+        
 
 if __name__ == "__main__":
     # Replace power_required with real data or a test profile
@@ -65,7 +70,7 @@ if __name__ == "__main__":
 
     power_required = [50000 for i in range(86400)]
 
-    power_model = Power(latitude=0, day_of_year=172, power_required=power_required, area = 1000)
+    power_model = Power(latitude=40, day_of_year=0, power_required=power_required, area = 3000)
     rfc = RFC(power_model)
 
     electrolysis_power = rfc.required_electrolysis_power()
@@ -74,14 +79,14 @@ if __name__ == "__main__":
     irradiance = power_model.irradiance
     full_power_required = np.where(
         irradiance > 0,
-        50_000 + electrolysis_power,
-        50_000
+        90_000 + electrolysis_power,
+        90_000
     )
 
    
 
     # Step 4: Rebuild the model with the correct profile
-    power_model = Power(latitude=0, day_of_year=172, power_required=full_power_required, area=1000)
+    power_model = Power(latitude=40, day_of_year=0, power_required=full_power_required, area=3000)
     rfc = RFC(power_model)
 
     print("RFC Mass (kg):", rfc.rfc_mass_kg())
