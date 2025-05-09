@@ -1,5 +1,6 @@
 import math
-from scipy.optimize import fsolve, fmin
+from scipy.optimize import fsolve, fminbound
+from Aerodynamic_Atmospheric.ISA_Calculator import ISA_Calculator
 
 class Airship:
     def __init__(self, FR, volume, lobes, velocity, altitude):
@@ -22,9 +23,12 @@ class Airship:
         self.reference_volume = self.volume**(2/3)
         self.velocity = velocity
         self.altitude = altitude
-        self.density = 0.00211              # problem for later density at 
-        self.density_sl = 0.0765 #lb/ft^3 # density at SL
-        self.density_maxh = 0.7860*self.density_sl
+        self.density = 0.00211              # problem for later density at
+        self.maxdensity = 0.001868
+        self.density_sl = 0.002377 #slung/ft^2 # density at SL
+        self.isa = ISA_Calculator(altitude=self.altitude,velocity=self.velocity)
+        self.density = self.isa.results[self.altitude]['Density [kg/m³]']/515.35549
+        self.density_sigma = self.density/self.density_sl
         self.mu = 3.66*10**-7               # find out
         self.n_engines = 4
         self.NL = 2.4               # find out, it is a number according to number of lobes
@@ -40,6 +44,8 @@ class Airship:
         #self.volume2_3 = self.volume ** (2 / 3)
 
         #Parameters for hybrid n_lobes >1
+
+
 
     
     def geomertic_parameters(self):
@@ -128,7 +134,7 @@ class Airship:
         Calculates the buoyant lift of the airship.
 
         """
-        self.buoyancy= self.gas_density*self.volume*self.density_maxh/self.density_sl
+        self.buoyancy= self.gas_density*self.volume*self.density_sigma
         self.BR = 0.7   #self.buoyancy/self.Wg
         return self.buoyancy
     
@@ -241,7 +247,7 @@ class Airship:
 
     def ballonet(self):
 
-        self.vball = self.volume*((1/(self.density_maxh/self.density_sl)-1))
+        self.vball = self.volume*((1/self.density_sigma-1))
         self.nball = 6
         self.surfaceballonet = math.pi*(3*self.vball/math.pi/6)**(2/3)*self.nball
         self.W_ball = 0.035*self.surfaceballonet
@@ -262,7 +268,7 @@ class Airship:
         self.Kp = 31.92
         self.nblades = 3
         self.W_prop = self.Kp*self.n_engines*(self.nblades)**0.391*(self.D_prop*self.P_hp_per_engine/1000)**0.782
-        self.W_fueltank = 2.49*(self.fuel_total/6)**0.6*(2)**0.2*self.n_engines**0.13
+        self.W_fueltank = 2.49*(self.fuel_total/6)**0.6 *(2)**0.2 *self.n_engines**0.13
         self.W_pressuresys = 0.02*self.woe
 
         self.W_acls = 1.6*4057
@@ -278,12 +284,15 @@ class Airship:
 
         return
     def iterator(self,Volume):
-        self.volume = Volume
+        returner=-100
+        self.volume = Volume#[0]
         self.geomertic_parameters()
         self.tailvolume()
         self.aerodynamic_properties()
         self.buoyant_lift()
         self.prelimanary_weight()
+        if self.wzf<self.payload:
+            returner= 1000000
         self.fuel_calculations()
         self.weight_calculations()
         self.calculate_lift()
@@ -291,10 +300,10 @@ class Airship:
         self.further_weight()
         self.ballonet()
         #print(self)
-        return abs(self.wg - self.W_g2)
+        return abs(self.wg - self.W_g2) if returner <0 else returner
     def iterate_to_exact(self):
         #fsolve(self.iterator,2000000,xtol=1e-3)
-        fmin(self.iterator,2e6)
+        fminbound(self.iterator,0,self.volume*10)
         return
 
     def __str__(self):
