@@ -16,7 +16,7 @@ print(hybrid)
 #hybrid.iterate_to_exact()
 #print(hybrid)
 
-simplehybrid = AS(3, 2e8, 3, 84.5, 60e3,1000)
+simplehybrid = AS(3, 2e8, 3, 34.5, 40e3,1000)
 simplehybrid.complete()
 graph = visualise.altitude_graph(simplehybrid)
 
