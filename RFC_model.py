@@ -4,61 +4,65 @@ import numpy as np
 #Values from sources
 
 class RFC:
-     def __init__(self, power_model: Power, energy_density = 2.6, vol_energy_density = 1.2, efficiency=0.5, energy_density_hydrogen=33.33): #specific energy in kWh/kg, volemtric specific energy in kWh/m^3 efficency in %
+     def __init__(self, power_model: Power, energy_density = 0.65, vol_energy_density = 1.2, efficiency=0.5, energy_density_hydrogen=33.33): #specific energy in kWh/kg, volemtric specific energy in kWh/m^3 efficency in %
             self.power_model = power_model
             self.energy_density = energy_density
             self.vol_energy_density = vol_energy_density
             self.efficiency = efficiency
             self.energy_density_hydrogen = energy_density_hydrogen
+
+     def total_deficit_joules(self):
+         """
+         Calculate the total energy deficit (in joules) over the entire day.
+         """
+         net_power = self.power_model.net_power()  # Instantaneous power in W
+    
+         # Sum the negative power values (deficit) over time in joules (W * seconds)
+         deficit_joules = np.sum(np.where(net_power < 0, -net_power, 0))  # Negative power indicates deficit
+
+         return deficit_joules
+
+     def energy_deficit_kWh(self):
+   
+         deficit_joules = self.total_deficit_joules()  # Total deficit in joules
+         deficit_kWh = deficit_joules / 3.6e6  # Convert from Joules to kWh (1 kWh = 3600000 J)
+         return deficit_kWh
+
         
      def rfc_mass_kg(self):
-        deficit = self.power_model.max_deficit()
-        if deficit is not None:
-            energy_kWh = abs(deficit) * 2.77e-7 / self.efficiency  # J → kWh, account for round-trip losses
-            return energy_kWh / self.energy_density
-        return 0
+        deficit = self.energy_deficit_kWh()
+        energy_kWh = deficit / self.efficiency  
+        return energy_kWh / self.energy_density
+    
 
      def rfc_volume_m3(self):
-        deficit = self.power_model.max_deficit()
-        if deficit is not None:
-            energy_kWh = abs(deficit) * 2.77e-7 / self.efficiency  # J → kWh, account for round-trip losses
-            return energy_kWh / self.vol_energy_density
-        return 0
-     
-     ''''
-     def required_electrolysis_power(self, electrolyzer_efficiency=0.7):
-       deficit = self.power_model.max_deficit()
-       if deficit is None:
-            return 0
-
-    # Total energy needed to regenerate hydrogen + oxygen (in J)
-    # This includes efficiency loss in electrolysis
-       energy_needed = abs(deficit) / electrolyzer_efficiency
-
-    # Count the number of seconds during the day when irradiance > 0
-       daylight_seconds = np.sum(self.power_model.irradiance > 0)
-       if daylight_seconds == 0:
-            return 0
-
-    # Required average power during daylight (in Watts)
-       return energy_needed / daylight_seconds
-     '''''
+        deficit = self.energy_deficit_kWh()
+        energy_kWh = deficit / self.efficiency
+        return energy_kWh / self.vol_energy_density
+        
 
      def hydrogen_used(self):
          """
          Calculate the amount of hydrogen used in kg.
          """
          # Get the total energy deficit in kWh
-         energy_kWh = abs(self.power_model.max_deficit()) * 2.77e-7 / self.efficiency
+         energy_kWh = self.energy_deficit_kWh() / 0.6
          # Calculate the mass of hydrogen
          mass_hydrogen = energy_kWh / self.energy_density_hydrogen 
          return mass_hydrogen
      
-     def required_electrolysis_power(self, electrolyzer_efficiency=0.7):
+     def water_mass(self):
+         mass_water = self.hydrogen_used() * 9
+         return mass_water
+     
+     def required_electrolysis_power(self):
          mass_hydrogen = self.hydrogen_used()
+         daylight_seconds = np.sum(self.power_model.irradiance > 0)
+         daylight_hours = daylight_seconds / 3600
 
-         energy_required_electrolysis_kWh = mass_hydrogen * 39.4 / electrolyzer_efficiency
-         energy_required_electrolysis_W = energy_required_electrolysis_kWh * 3.6e6 / 86400  # Convert kWh to W and divide by seconds in a day
+
+         energy_required_electrolysis_kWh = mass_hydrogen * 53.4 #kWh
+         energy_required_electrolysis_W = energy_required_electrolysis_kWh / daylight_hours * 1000 # Convert kWh to W and divide by seconds in a day
 
          return energy_required_electrolysis_W
 
@@ -68,32 +72,38 @@ if __name__ == "__main__":
     # Replace power_required with real data or a test profile
     time = np.arange(86400)
 
-    power_required = [50000 for i in range(86400)]
+    power_required = [40000 for i in range(86400)]
 
-    power_model = Power(latitude=40, day_of_year=0, power_required=power_required, area = 3000)
+    power_model = Power(latitude=40, day_of_year=1, power_required=power_required, area=30000)
     rfc = RFC(power_model)
-
     electrolysis_power = rfc.required_electrolysis_power()
 
-    # Step 3: Now generate actual power_required profile based on daylight
-    irradiance = power_model.irradiance
-    full_power_required = np.where(
-        irradiance > 0,
-        90_000 + electrolysis_power,
-        90_000
-    )
+    elevation = power_model._solar_elevation()
+    
+    raw_irradiance = np.sin(elevation) * 1300
+    raw_irradiance[elevation <= 0] = 0
+    
+    daylight_irradiance = raw_irradiance[raw_irradiance > 0]
+    average_daylight_irradiance = np.mean(daylight_irradiance)
 
-   
+    area = (40000 + electrolysis_power) / (0.30 * average_daylight_irradiance)  # Adjusted area based on the new power requirement
 
     # Step 4: Rebuild the model with the correct profile
-    power_model = Power(latitude=40, day_of_year=0, power_required=full_power_required, area=3000)
+    power_model = Power(latitude=40, day_of_year=1, power_required=power_required, area=area)
     rfc = RFC(power_model)
 
     print("RFC Mass (kg):", rfc.rfc_mass_kg())
     print("RFC Volume (m³):", rfc.rfc_volume_m3())
     print(f"Required Electrolysis Power (W): {rfc.required_electrolysis_power()}")
     print(f"Hydrogen used (kg): {rfc.hydrogen_used()}")
-    print(np.sum(power_model.power_generated())/3.6e6)     
+    print(f"Water mass (kg): {rfc.water_mass()}")
+    print("areas", area)
+    power = power_model.power_generated()
+    average_power_W = np.mean(power)
+    print(f"Average Power Generated (W): {average_power_W}")
+    print(power_model.max_deficit())
+    print(average_daylight_irradiance)
+    print(rfc.energy_deficit_kWh())
         
     
 

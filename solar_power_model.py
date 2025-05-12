@@ -7,7 +7,7 @@ class Power:
     based on location, date, and system parameters.
     """
 
-    def __init__(self, latitude: float, day_of_year: int, area: float, power_required=None, max_irradiance: float = 1350, efficiency: float = 0.24):
+    def __init__(self, latitude: float, day_of_year: int, area: float, power_required=None, max_irradiance: float = 1800, efficiency: float = 0.24):
         """
         Initialize the Power model.
 
@@ -161,10 +161,10 @@ class Power:
 if __name__ == "__main__":
     seconds_in_day = 86400
     time = np.arange(seconds_in_day)
-    amplitude = 200  # Max power required in watts
-    power_required = amplitude * (1 + np.sin(2 * np.pi * time / seconds_in_day))  # Sine wave with period of 24 hours
+    #amplitude = 200  # Max power required in watts
+    power_required = [100000 for i in range(86400)] # Sine wave with period of 24 hours
 
-    power = Power(latitude=0, day_of_year=1, area=10, power_required=power_required)
+    power = Power(latitude=40, day_of_year=1, area=1000, power_required=power_required)
 
     print('Deficit: ', power.max_deficit())
     print('Surplus: ', power.max_surplus())
