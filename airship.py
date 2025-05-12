@@ -4,7 +4,7 @@ from Aerodynamic_Atmospheric.ISA_Calculator import ISA_Calculator
 
 
 class Airship:
-    def __init__(self, FR, volume, lobes, velocity, altitude, payload):
+    def __init__(self, FR, volume, lobes, velocity, altitude, payload,range):
         """
         Initializes an Airship object.
 
@@ -17,6 +17,7 @@ class Airship:
         - payload (float): Payload capacity in kilograms
         - altitude (float): Operating altitude in meters
         """
+        NLs = {1:2,2:2.25,3:2.4,4:2.5,5:2.54}
         self.FR = FR
         self.n_lobes = lobes
         self.volume = volume
@@ -31,12 +32,13 @@ class Airship:
         self.density = self.isa.results[self.altitude*0.3048]['Density [kg/m³]']/515.35549
         self.density_sigma = self.density/self.density_sl
         self.mu = 3.66*10**-7               # find out
+        self.mu_cr = 0.0209*self.isa.dynamic_viscosity(self.isa.results[self.altitude*0.3048]["Temperature [K]"])
         self.n_engines = 4
-        self.NL = 2.4               # find out, it is a number according to number of lobes
+        self.NL = NLs[self.n_lobes]               # find out, it is a number according to number of lobes
         self.gas_density =  0.0646 #lb/ft3 for helium at sea level
         self.fuelres = 1251        #find out later
         self.efficienty_eng = 0.65
-
+        self.range = range
         self.payload = payload
         #self.length = length
         #self.n_eng = n_eng
@@ -96,7 +98,7 @@ class Airship:
         """
 
         self.q = 0.5 * self.density * (self.velocity**2)
-        self.Re = self.density*self.velocity*self.length/self.mu
+        self.Re = self.density*self.velocity*self.length/self.mu_cr
         self.Cf = 0.455 / (math.log10(self.Re)**2.58)
         self.FFbody = 1+ 1.5/self.FR**1.5+7/self.FR**3
         self.CD0 = self.FFbody * self.Cf * self.wetsurface / self.reference_volume
@@ -107,7 +109,7 @@ class Airship:
         self.FFtail = 1 +1.2*self.tctail+100*self.tctail**4
         
         self.ctail = 0.5*((self.ARtail*self.surface_ht/2)**0.5 +(self.ARtail*self.surface_vt/2)**0.5)
-        self.Retail = self.density*self.velocity*self.ctail/self.mu
+        self.Retail = self.density*self.velocity*self.ctail/self.mu_cr
         self.Cfetail = 0.455 / (math.log10(self.Retail)**2.58)
 
         self.surfacewettails = 2.2*(self.surface_ht + self.surface_vt)
@@ -148,7 +150,7 @@ class Airship:
     def fuel_calculations(self):
 
 
-        self.range = 1000
+        
         self.BSFC = 0.48
         self.wland = self.wzf + self.fuelres
         self.wh1 = self.wland-self.buoyancy
@@ -156,9 +158,6 @@ class Airship:
         self.B = self.q * self.reference_volume * (self.CD0/ self.K) ** 0.5
         self.wh0 = self.B*math.tan((self.range/self.A)+math.atan(self.wh1/self.B))
         self.fuel_total = self.wh0-self.wh1+self.fuelres
-        if self.fuel_total < 0:
-            self.fuel_total = 0
-            print(f"Fuel is negative: {self.fuel_total} lb")
         return self.fuel_total
 
     def weight_calculations(self):
@@ -291,7 +290,8 @@ class Airship:
         return
     def iterator(self,Volume):
         if Volume < abs(1e5):
-            return 1e6
+            print (f'Volume is too small: {Volume} ft³')
+            return 1e6*abs(1e5 - Volume)
         self.volume = abs(Volume[0])
         self.geomertic_parameters()
         self.tailvolume()
@@ -299,6 +299,10 @@ class Airship:
         self.buoyant_lift()
         self.prelimanary_weight()
         self.fuel_calculations()
+        if self.fuel_total < 0:
+            print(f"Fuel is negative: {self.fuel_total} lb")
+            self.fuel_total = 0
+            #return 1e6*abs(self.fuel_total)
         self.weight_calculations()
         self.calculate_lift()
         self.engine()
@@ -308,7 +312,7 @@ class Airship:
         return abs(self.wg - self.W_g2)
     def iterate_to_exact(self):
         #fsolve(self.iterator,2000000,xtol=1e-3)
-        fmin(self.iterator,self.volume)
+        fmin(self.iterator,self.volume,maxiter=10000)
         return
 
     def __str__(self):
