@@ -3,7 +3,7 @@ from scipy.optimize import fsolve, fmin
 from Aerodynamic_Atmospheric.ISA_Calculator import ISA_Calculator
 
 class Airship:
-    def __init__(self, FR, volume, lobes, velocity, altitude):
+    def __init__(self, FR, volume, lobes, velocity, altitude, payload):
         """
         Initializes an Airship object.
 
@@ -26,8 +26,8 @@ class Airship:
         self.density = 0.00211              # problem for later density at
         self.maxdensity = 0.001868
         self.density_sl = 0.002377 #slung/ft^2 # density at SL
-        self.isa = ISA_Calculator(altitude=self.altitude,velocity=self.velocity)
-        self.density = self.isa.results[self.altitude]['Density [kg/m³]']/515.35549
+        self.isa = ISA_Calculator(altitude=self.altitude*0.3048,velocity=self.velocity)
+        self.density = self.isa.results[self.altitude*0.3048]['Density [kg/m³]']/515.35549
         self.density_sigma = self.density/self.density_sl
         self.mu = 3.66*10**-7               # find out
         self.n_engines = 4
@@ -36,7 +36,7 @@ class Airship:
         self.fuelres = 1251        #find out later
         self.efficienty_eng = 0.65
 
-        self.payload = 40000
+        self.payload = payload
         #self.length = length
         #self.n_eng = n_eng
         #self.payload = payload
@@ -155,6 +155,9 @@ class Airship:
         self.B = self.q * self.reference_volume * (self.CD0/ self.K) ** 0.5
         self.wh0 = self.B*math.tan((self.range/self.A)+math.atan(self.wh1/self.B))
         self.fuel_total = self.wh0-self.wh1+self.fuelres
+        if self.fuel_total < 0:
+            self.fuel_total = 0
+            print(f"Fuel is negative: {self.fuel_total} lb")
         return self.fuel_total
 
     def weight_calculations(self):
@@ -284,6 +287,8 @@ class Airship:
 
         return
     def iterator(self,Volume):
+        if Volume < abs(1e5):
+            return 1e6
         self.volume = abs(Volume[0])
         self.geomertic_parameters()
         self.tailvolume()

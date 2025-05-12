@@ -1,6 +1,6 @@
 from airship import Airship
 
-hybrid = Airship(3, 2e6, 3, 84.5, 20e3)
+hybrid = Airship(3, 2e8, 3, 84.5, 60e3,1000)
 '''
 hybrid.iterator(2e6)
 print(hybrid)
