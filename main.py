@@ -1,5 +1,6 @@
 from airship import Airship
 from visualise import visualise
+from airship_simple import Airship as AS
 
 hybrid = Airship(3, 2e8, 3, 84.5, 60e3,1000,1000)
 '''
@@ -12,10 +13,12 @@ print(hybrid)
 hybrid.iterator(1e6)
 print(hybrid)
 '''
-hybrid.iterate_to_exact()
-print(hybrid)
+#hybrid.iterate_to_exact()
+#print(hybrid)
 
-graph = visualise.altitude_graph(hybrid)
+simplehybrid = AS(3, 2e8, 3, 34.5, 40e3,1000)
+simplehybrid.complete()
+graph = visualise.altitude_graph(simplehybrid)
 
 
 '''

@@ -42,7 +42,7 @@ class AirshipAerodynamic(Aerodynamic):
         plt.ylabel('Volume (m³)')
         plt.title(f'Feasible Altitude (h) vs Volume (V)\nWeight: {self.weight} N')
         plt.xlim(0, 25000)
-        plt.axhline(30000, color='red', linestyle='--', label='Max Volume (1e6 ft³)')
+        #plt.axhline(30000, color='red', linestyle='--', label='Max Volume (1e6 ft³)')
         plt.ylim(0, 100000)
         plt.grid(True)
         plt.legend()
@@ -50,5 +50,5 @@ class AirshipAerodynamic(Aerodynamic):
 
 
 # Airship example
-airship = AirshipAerodynamic(weight=4000, altitude=20000, gas_type="helium")
+airship = AirshipAerodynamic(weight=10000, altitude=20000, gas_type="hydrogen")
 airship.plot_feasible_h_V()
