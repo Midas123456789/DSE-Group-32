@@ -77,12 +77,15 @@ class ClassIIWeightEstimation:
             self.results["MTOW [kg]"] = round(self.MTOW_kg, 2)
             self.results["OEW [kg]"] = round(OEW, 2)
             self.results["Battery [kg]"] = round(self.battery_mass_kg, 2)
+            self.results["Fuel [kg]"] = round(fuel_weight, 2)
             self.results["Payload [kg]"] = round(self.payload_weight_kg, 2)
             self.results.update({f"{k} [kg]": round(v, 2) for k, v in components.items()})
             
             self.estimated_MTOM = self.results["MTOW [kg]"]
             self.estimated_OEM = self.results["OEW [kg]"]
+            self.estimated_OEM_fraction = self.estimated_OEM / self.estimated_MTOM
             self.estimated_battery_mass_kg = self.results["Battery [kg]"]
+            self.estimated_fuel_weight_kg = self.results["Fuel [kg]"]
 
     def __str__(self):
         if not self.converged:

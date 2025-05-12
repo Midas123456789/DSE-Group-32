@@ -7,11 +7,11 @@ class Class_I_Weight_Estimation():
     Class I Weight Estimation based on assumed mass fractions and MTOW iteration,
     including fuel and battery usage estimation.
     """
-    def __init__(self, payload_weight_kg=100,
-                    residual_fuel_fraction=0.0 ,empty_weight_fraction=0.5, initial_mtow_guess_kg=1000, iteration_limit=100, tolerance=0.1, 
-                    W1_WTO=1, W2_W1=1, W3_W2=1, W4_W3=1, W5_W4=1, W6_W5=1, W7_W6=1, W8_W7=1, Wfinal_W8=1,
-                    n_p=0, c_p=0, g=0, A=0, e=0, CD0=0,
-                    battery_power_available=0, battery_specific_energy_Wh_per_kg=200):
+    def __init__(self, payload_weight_kg,
+                    residual_fuel_fraction ,empty_weight_fraction, initial_mtow_guess_kg, iteration_limit, tolerance, 
+                    W1_WTO, W2_W1, W3_W2, W4_W3, W5_W4, W6_W5, W7_W6, W8_W7, Wfinal_W8,
+                    n_p, c_p, g, A, e, CD0,
+                    battery_power_available, battery_specific_energy_Wh_per_kg, endurance):
         
         # Requirements input
         self.payload_weight_kg = payload_weight_kg
@@ -19,8 +19,8 @@ class Class_I_Weight_Estimation():
         # Battery inputs
         self.battery_power_available = battery_power_available
         self.battery_specific_energy_Wh_per_kg = battery_specific_energy_Wh_per_kg
-        self.battery_mass_kg = (battery_power_available / battery_specific_energy_Wh_per_kg) if battery_specific_energy_Wh_per_kg > 0 else 0
-        
+        self.battery_mass_kg = ((battery_power_available * (endurance * 24)) / battery_specific_energy_Wh_per_kg) if battery_specific_energy_Wh_per_kg > 0 else 0
+        print(self.battery_mass_kg)
         # Inputs for first weight estimation
         self.fuel_fraction = 1 - (W1_WTO * W2_W1 * W3_W2 * W4_W3 * W5_W4 * W6_W5 * W7_W6 * W8_W7 * Wfinal_W8)
         self.residual_fuel_fraction = residual_fuel_fraction

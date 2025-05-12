@@ -12,7 +12,6 @@ from ISA_Calculator import ISA_Calculator
 from Others.Performance import Performance
 
 
-
 class AircraftInputs:
     """Container for all aircraft design input parameters."""
     def __init__(self, **kwargs):
@@ -43,29 +42,31 @@ class Aircraft:
             W4_W3=inputs.W4_W3, W5_W4=inputs.W5_W4, W6_W5=inputs.W6_W5,
             W7_W6=inputs.W7_W6, W8_W7=inputs.W8_W7, Wfinal_W8=inputs.Wfinal_W8,
             battery_power_available=inputs.battery_power_available,
+            endurance=inputs.endurance,
             battery_specific_energy_Wh_per_kg=inputs.battery_specific_energy_Wh_per_kg,
             n_p=inputs.n_p, c_p=inputs.c_p,
-            A=inputs.A, e=inputs.e, CD0=inputs.CD0, g=self.g
+            A=inputs.A, e=inputs.e, CD0=inputs.CD0, g=self.g,
+            iteration_limit=100, tolerance=0.01,
         )
 
         print(f"[0] MTOM: {self.class_I.estimated_MTOM:.2f} kg | "
             f"OEW_frac: {(self.class_I.estimated_OEM / self.class_I.estimated_MTOM):.3f} | "
             f"Battery mass: {self.class_I.battery_mass_kg:.2f} kg | Δ: None")
 
-        # Performance and aerodynamics
-        self.performance = Performance(self)
         self.aero = AircraftAerodynamic(
             W=self.class_I.estimated_MTOM,
             h=inputs.h_cruise,
-            V=self.performance.optimum_V,
             S=inputs.S, A=inputs.A, e=inputs.e,
             CD0=inputs.CD0, CL=inputs.CL_cruise
         )
 
+        # Performance and aerodynamics
+        self.performance = Performance(self)
+        
         # Class II weight estimation
         self.class_II = ClassIIWeightEstimation(
             payload_weight_kg=inputs.payload_weight_kg,
-            battery_mass_kg=self.class_I.battery_mass_kg,
+            battery_mass_kg=self.performance.battery_mass_kg,
             S=inputs.S, A=inputs.A, g=self.g,
             fuselage_length=inputs.fuselage_length,
             fuselage_diameter=inputs.fuselage_diameter,
@@ -79,55 +80,62 @@ if __name__ == "__main__":
     req = Requirements()
     inputs = AircraftInputs(
         
+        # Mission
+        endurance=req.endurance,
+        
+        # Weights
         payload_weight_kg=req.payload_weight_kg,
-        residual_fuel_fraction=0.00,
-        empty_weight_fraction=0.7,
         initial_mtow_guess_kg=15 * req.payload_weight_kg,
+        empty_weight_fraction=0.7,
         
-        W1_WTO=1, 
-        W2_W1=1, 
-        W3_W2=1, 
-        W4_W3=1, 
-        W5_W4=1,
-        W6_W5=1, 
-        W7_W6=1, 
-        W8_W7=1, 
-        Wfinal_W8=1,
+        # Batteries
+        battery_power_available=req.power_available,
+        battery_specific_energy_Wh_per_kg=435,
         
+        # Currently not using fuel!!!
+        residual_fuel_fraction=0.00,
+        W1_WTO=1, W2_W1=1, W3_W2=1, W4_W3=1, W5_W4=1,W6_W5=1, W7_W6=1, W8_W7=1, Wfinal_W8=1,
+        
+        # Propulsion system
         n_p=0.85, 
         c_p=0.6,
         
+        # Design parameters
         CL_cruise=1.2, 
         CL_TO=2.0, 
         CL_land=2.2,
         
+        # Configuration
         CD0=0.020, 
-        
-        chord_length=3, 
         S=30, 
         A=25, 
         e=0.85,
+        chord_length=3, 
+        fuselage_length=2, 
+        fuselage_diameter=0.001,
         
+        # Choice
         h_cruise=15000,
         
-        battery_power_available=20000,
-        battery_specific_energy_Wh_per_kg=435,
-        
-        fuselage_length=2, 
-        fuselage_diameter=0.1
-        
     )
-
     ac = Aircraft(inputs)
     
+    convergence_rate = 0.01
+    break_value = 100
+    counter = 0
+    while counter <= break_value:
+        counter += 1
+    
+    
+    
     print(50 * '-')
-    print(f"MTOM Class I [kg]: {ac.class_I.estimated_MTOM:.2f} kg")
-    print(f"MTOM Class II [kg]: {ac.class_II.estimated_MTOM:.2f} kg")
+    print(f"MTOM [kg]: {ac.class_II.estimated_MTOM:.2f} kg")
     print(f"Payload mass [kg]: {ac.class_II.payload_weight_kg:.2f} kg")
-    print(f"Fuel mass used [kg]: {ac.class_I.W_f_used:.2f} kg")
-    print(f"Battery mass [kg]: {ac.class_I.battery_mass_kg:.2f} kg")
-    print(f"Cruise velocity [m/s]: {ac.performance.optimum_V:.2f} m/s")
-    print(f"Endurance at cruise velocity [h]: {ac.performance.max_endurance / 3600:.2f} h")
+    print(f"Fuel mass used [kg]: {ac.class_II.estimated_fuel_weight_kg:.2f} kg")
+    print(f"Battery mass [kg]: {ac.class_II.estimated_battery_mass_kg:.2f} kg")
+    print("")
+    print(f"Battery power required [W]: {ac.performance.battery_power_required:.2f} W")
+    print(f"Cruise velocity for maximum endurance [m/s]: {ac.performance.optimum_V:.2f} m/s")
     print(50 * '-')
-
-    # TODO: Build loop for class I and class II, define endurance requirement and find power required based on that
+    
+    # TODO: fix the weird values for P_req and create iteration
