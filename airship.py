@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 class Airship:
-    def __init__(self, FR, volume, lobes, velocity, altitude):
+    def __init__(self, FR, volume, lobes, velocity, altitude, payload):
         """
         Initializes an Airship object.
 
@@ -30,8 +30,8 @@ class Airship:
         self.density = 0.00211              # problem for later density at
         self.maxdensity = 0.001868
         self.density_sl = 0.002377 #slung/ft^2 # density at SL
-        self.isa = ISA_Calculator(altitude=self.altitude,velocity=self.velocity)
-        self.density = self.isa.results[self.altitude]['Density [kg/m³]']/515.35549
+        self.isa = ISA_Calculator(altitude=self.altitude*0.3048,velocity=self.velocity)
+        self.density = self.isa.results[self.altitude*0.3048]['Density [kg/m³]']/515.35549
         self.density_sigma = self.density/self.density_sl
         self.mu = 3.66*10**-7               # find out
         self.n_engines = 4
@@ -40,7 +40,7 @@ class Airship:
         self.fuelres = 1251        #find out later
         self.efficienty_eng = 0.65
 
-        self.payload = 40000
+        self.payload = payload
         #self.length = length
         #self.n_eng = n_eng
         #self.payload = payload
@@ -127,6 +127,7 @@ class Airship:
         self.CD0int = (4.78e-6 * self.volume)/self.reference_volume
 
         self.CD0 = self.CD0 + self.CD0tail + self.CD0_cab_gond + self.CD0_eng_nac + self.CD0_eng_cooling + self.CD0_eng_mount + self.CD0_cables + self.CD0_acls + self.CD0int
+
         self.K = -0.0146*(1/self.AR)**4+0.182*(1/self.AR)**3-0.514*(1/self.AR)**2+0.838*(1/self.AR)-0.053
         self.K = self.K/self.NL
         
@@ -158,6 +159,9 @@ class Airship:
         self.B = self.q * self.reference_volume * (self.CD0/ self.K) ** 0.5
         self.wh0 = self.B*math.tan((self.range/self.A)+math.atan(self.wh1/self.B))
         self.fuel_total = self.wh0-self.wh1+self.fuelres
+        if self.fuel_total < 0:
+            self.fuel_total = 0
+            print(f"Fuel is negative: {self.fuel_total} lb")
         return self.fuel_total
 
     def weight_calculations(self):
@@ -289,7 +293,9 @@ class Airship:
 
         return
     def iterator(self,Volume):
-        self.volume = Volume
+        if Volume < abs(1e5):
+            return 1e6
+        self.volume = abs(Volume[0])
         self.geomertic_parameters()
         self.tailvolume()
         self.aerodynamic_properties()
@@ -302,29 +308,11 @@ class Airship:
         self.further_weight()
         self.ballonet()
         #print(self)
-        return self.wg - self.W_g2
-
+        return abs(self.wg - self.W_g2)
     def iterate_to_exact(self):
         #fsolve(self.iterator,2000000,xtol=1e-3)
-        #fmin(self.iterator,self.volume)
-        converge = False
-        steps = 100
-
-        while not converge:
-
-            print(self.volume)
-            if self.iterator(self.volume) > 0:
-                self.volume = self.volume - steps
-
-            if self.iterator(self.volume) < 0:
-                self.volume = self.volume + steps
-
-            if abs(self.iterator(self.volume)) < steps:
-                converge = True
-
-        print(self.volume)
+        fmin(self.iterator,self.volume)
         return
-
 
     def __str__(self):
         return (f"Airship(volume={self.volume} ft³, wg ={self.wg} lb, wg2={self.W_g2} lb, difference= {self.wg - self.W_g2}")
