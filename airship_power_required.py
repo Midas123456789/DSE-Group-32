@@ -23,7 +23,7 @@ if __name__ == "__main__":
     # Constants
     airship_CD0 = 0.025 
     drag_factor_K = 0.286
-    airship_CLaero = 0
+    airship_CLaero = 0.2
     rho = 0.00017266  # slugs/ft^3
     airship_refrencearea = 10562   # ft^2
     prop_efficiency = 0.63
@@ -38,9 +38,9 @@ if __name__ == "__main__":
     power_required = prop_power_airship.calculate_power()
 
     # Plotting the results
-    plt.plot(airship_velocity, power_required)
+    plt.plot(airship_velocity*0.3048, power_required)
     plt.title('Power Required vs Airship Velocity')
-    plt.xlabel('Airship Velocity (ft/s)')
+    plt.xlabel('Airship Velocity (ms/s)')
     plt.ylabel('Power Required (kW)')
     plt.grid()
     plt.show()
