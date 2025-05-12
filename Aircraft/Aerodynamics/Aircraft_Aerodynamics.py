@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from Aerodynamics import *
+from Aerodynamics.Aerodynamics import Aerodynamic
 
 class AircraftAerodynamic(Aerodynamic):
     def __init__(self, W=0, h=0, V=0, S=0, A=0, e=0, CD0=0, CL=0):

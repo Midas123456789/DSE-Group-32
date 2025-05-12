@@ -1,4 +1,4 @@
-from ISA_Calculator import *
+from Aircraft.ISA_Calculator import *
 import numpy as np
 import matplotlib.pyplot as plt
 

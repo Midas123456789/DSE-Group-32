@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from Power_calculation import compute_propeller_power
+from Aerodynamics.Power_calculation import compute_propeller_power
 
 def plot_feasible_S_V(aircraft, CL_list):
     V = np.linspace(10, 200, 500)

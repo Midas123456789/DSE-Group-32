@@ -2,9 +2,6 @@ import numpy as np
 from ISA_Calculator import *
 import matplotlib.pyplot as plt
 
-import numpy as np
-import matplotlib.pyplot as plt
-from ISA_Calculator import *
 
 class Performance:
     def __init__(self, ac, plot=False):
