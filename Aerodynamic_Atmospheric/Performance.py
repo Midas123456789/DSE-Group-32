@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from ISA_Calculator import *
 
 class Performance:
-    def __init__(self, ac):
+    def __init__(self, ac, plot=False):
         self.ac = ac
 
         # Inputs
@@ -26,14 +26,18 @@ class Performance:
 
         # Class I estimates
         self.estimated_MTOM = ac.class_I.estimated_MTOM
+
         self.W_f_used = ac.class_I.W_f_used  # Assuming all fuel used for endurance
         self.battery_power_available = ac.inputs.battery_power_available
 
         # Constants
         self.weight_N = self.estimated_MTOM * self.g
-        self.L_D_endurance = np.sqrt((3 * np.pi * self.A * self.e) / self.CD0)
+        self.L_D_endurance = np.sqrt((3 * np.pi * self.A * self.e) / self.CD0) # Maximum endurance
+        
+        self.plot = plot
+        self.plot_endurance_vs_velocity()
 
-    def plot_endurance_vs_velocity(self, plot=True):
+    def plot_endurance_vs_velocity(self, plot=False):
         V_range = np.linspace(10, 150, 1500)
 
         total_endurance_list = []
@@ -54,7 +58,7 @@ class Performance:
                 induced_drag = (self.weight_N**2) / (q * self.S * np.pi * self.A * self.e)
                 total_drag = parasite_drag + induced_drag
                 power_required_W = total_drag * V / self.n_p
-                battery_endurance = ((self.battery_power_available * 1) / power_required_W) * 3600  # [s]
+                battery_endurance = ((self.battery_power_available * 3600) / power_required_W)  # [seconds]
             else:
                 battery_endurance = 0
 
@@ -81,7 +85,8 @@ class Performance:
         self.optimum_V = V_range[max_idx]
         self.max_endurance = max(total_endurance_list)
 
-        if plot:
+        self.plot = plot
+        if self.plot:
             plt.show()
 
 

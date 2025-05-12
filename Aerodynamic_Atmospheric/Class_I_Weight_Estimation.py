@@ -10,7 +10,7 @@ class Class_I_Weight_Estimation():
     def __init__(self, payload_weight_kg=100,
                     residual_fuel_fraction=0.0 ,empty_weight_fraction=0.5, initial_mtow_guess_kg=1000, iteration_limit=100, tolerance=0.1, 
                     W1_WTO=1, W2_W1=1, W3_W2=1, W4_W3=1, W5_W4=1, W6_W5=1, W7_W6=1, W8_W7=1, Wfinal_W8=1,
-                    n_p=0, c_p=0, g=0, A=0, e=0, CD0=0,
+                    n_p=0, c_p=0, g=0, A=0, e=0, CD0=0, battery_mass_kg=None,
                     battery_power_available=0, battery_specific_energy_Wh_per_kg=200):
         
         # Requirements input
@@ -19,7 +19,10 @@ class Class_I_Weight_Estimation():
         # Battery inputs
         self.battery_power_available = battery_power_available
         self.battery_specific_energy_Wh_per_kg = battery_specific_energy_Wh_per_kg
-        self.battery_mass_kg = (battery_power_available / battery_specific_energy_Wh_per_kg) if battery_specific_energy_Wh_per_kg > 0 else 0
+        if battery_mass_kg is None:
+            self.battery_mass_kg = (battery_power_available / battery_specific_energy_Wh_per_kg) if battery_specific_energy_Wh_per_kg > 0 else 0
+        else:
+            self.battery_mass_kg = battery_mass_kg
         
         # Inputs for first weight estimation
         self.fuel_fraction = 1 - (W1_WTO * W2_W1 * W3_W2 * W4_W3 * W5_W4 * W6_W5 * W7_W6 * W8_W7 * Wfinal_W8)
@@ -58,6 +61,7 @@ class Class_I_Weight_Estimation():
         #self.Determine_Brequet_Endurance()
     
     def Determine_MTOW(self):
+        
         for _ in range(self.iteration_limit):
             OEW = self.MTOW_kg * self.empty_weight_fraction
             fuel_weight = self.MTOW_kg * self.fuel_fraction
@@ -125,8 +129,8 @@ if __name__ == "__main__":
         
         # Estimates and given weights
         payload_weight_kg      = req.payload_weight_kg,
-        empty_weight_fraction  = 0.7,
-        initial_mtow_guess_kg  = 15 * req.payload_weight_kg,
+        empty_weight_fraction  = 0.21,
+        initial_mtow_guess_kg  = 208,
         
         # Fuel fractions
         residual_fuel_fraction = 0.00,
