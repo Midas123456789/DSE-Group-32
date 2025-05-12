@@ -1,10 +1,7 @@
 import math
-
-import numpy as np
 from scipy.optimize import fsolve, fmin
 from Aerodynamic_Atmospheric.ISA_Calculator import ISA_Calculator
-import matplotlib.pyplot as plt
-import pandas as pd
+
 
 class Airship:
     def __init__(self, FR, volume, lobes, velocity, altitude, payload):
@@ -182,9 +179,9 @@ class Airship:
         self.vmax = 1.1*self.velocity
         self.qmax = 0.5 * self.density_sea * (self.vmax)**2  # dynamic pressure in lbf/ft²
         self.CL_maxpower = self.wh0 / (self.qmax * self.reference_volume)  # lift coefficient at maximum power
-        self.CL = self.wh0 / (self.q * self.reference_volume)
+        self.CL = self.wh0/(self.q*self.reference_volume)
         self.D_maxpower = (self.CD0 + self.K * self.CL_maxpower ** 2) * self.qmax * self.reference_volume  # drag force at maximum power in lbf
-        self.CD = (self.CD0 + self.K * self.CL ** 2) * self.q * self.reference_volume
+        self.CD = (self.CD0 + self.K * self.CL ** 2)
 
         return self.L_a, self.qmax, self.CL_maxpower, self.D_maxpower
 
@@ -317,50 +314,3 @@ class Airship:
     def __str__(self):
         return (f"Airship(volume={self.volume} ft³, wg ={self.wg} lb, wg2={self.W_g2} lb, difference= {self.wg - self.W_g2}")
                # f"length={self.length} m, dc={self.dc} m")
-
-
-class visualise:
-
-    def __init__(self, airship):
-        self.airship = airship
-        self.alt_step = 1000
-
-        # At a certain FR, at a certain amount of lobes
-        # FR = [2.5, 3, 4, 5]
-
-        def graphs(self):
-
-            graph_df = [self.airship.altitude, self.airship.volume, self.airship.wg, self.airship.CL, self.airship.CD]
-            altitude = np.linspace(self.altitude+self.alt_step, 2 * self.altitude, self.alt_step)
-            for altitudes in altitude:
-                airship = Airship(self.airship.FR, self.airship.volume, self.airship.n_lobes, self.airship.n_lobes, altitudes)
-                row = [altitudes, airship.iterate_to_exact(), self.airship.wg, self.airship.CL, self.airship.CD]
-
-                graph_df = np.vstack((graph_df, row))
-
-            graph_df = pd.DataFrame(graph_df, columns=['altitude', 'Volume', 'WeightG', 'CL', 'CD'])
-
-            fig, axes = plt.subplots(2, 2, figsize=(8, 6))
-            axes = axes.flatten()  # Flatten the 2x2 array of axes for easy indexing
-
-            # Create subplots: 2 rows, 2 columns
-            fig, axs = plt.subplots(2, 2, figsize=(10, 8))
-
-            # Plot in each subplot
-            axs[0, 0].plot(graph_df['altitude'], graph_df['Volume'])
-            axs[0, 0].set_title('altitude vs Volume')
-
-            axs[0, 1].plot(graph_df['altitude'], graph_df['WeightG'])
-            axs[0, 1].set_title('altitude vs WeightG')
-
-            axs[1, 0].plot(graph_df['altitude'], graph_df['CL'])
-            axs[1, 0].set_title('altitude vs CL')
-
-            axs[1, 1].plot(graph_df['altitude'], graph_df['CD'])
-            axs[1, 1].set_title('altitude vs CD')
-
-            # Adjust layout
-            plt.tight_layout()
-            plt.show()
-
-            return
