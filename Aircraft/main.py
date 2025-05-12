@@ -126,7 +126,7 @@ if __name__ == "__main__":
     while counter <= break_value:
         counter += 1
     
-    
+    ac.performance.plot_drag_to_power_for_max_endurance()
     
     print(50 * '-')
     print(f"MTOM [kg]: {ac.class_II.estimated_MTOM:.2f} kg")
@@ -139,3 +139,6 @@ if __name__ == "__main__":
     print(50 * '-')
     
     # TODO: fix the weird values for P_req and create iteration
+    # The weird values were caused by the fact you made it like you're flying 7 days on one charge!!! you should differentiate this
+    # Implement recharging
+    

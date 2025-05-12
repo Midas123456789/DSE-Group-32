@@ -18,7 +18,7 @@ class Performance:
         self.estimated_MTOM = ac.class_I.estimated_MTOM
         self.weight_N = self.estimated_MTOM * self.g
         self.L_D_endurance = np.sqrt((3 * np.pi * self.A * self.e) / self.CD0)  # Maximum L/D ratio for endurance
-        self.desired_endurance = ac.inputs.endurance * 24 * 60 * 60  # days to seconds
+        self.desired_endurance = ac.inputs.endurance * 24  # days to seconds
         self.battery_power_available = ac.inputs.battery_power_available  # kW to W
         self.design_for_endurance()
 
@@ -40,7 +40,7 @@ class Performance:
         
         # Calculate drag forces at optimal velocity
         total_drag, power_required_minimum = self.compute_drag_and_power(optimal_velocity)
-        energy_required_Wh = power_required_minimum * (self.desired_endurance / 3600)
+        energy_required_Wh = power_required_minimum * (self.desired_endurance)
         battery_mass_kg = energy_required_Wh / self.ac.inputs.battery_specific_energy_Wh_per_kg
         
         self.optimum_V = optimal_velocity
