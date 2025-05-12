@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from airship import Airship
+from airship_simple import Airship
 
 class visualise:
 
@@ -20,7 +20,7 @@ class visualise:
 
         for altitudes in altitude:
             airship = Airship(self.FR, self.volume, self.n_lobes, self.velocity, altitudes, self.payload)
-            airship.iterate_to_exact()
+            airship.complete()
             row = [altitudes, airship.volume, airship.wg, airship.CL, airship.CD]
 
             graph_df = np.vstack((graph_df, row))

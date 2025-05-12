@@ -4,7 +4,8 @@ from Aerodynamic_Atmospheric.ISA_Calculator import ISA_Calculator
 
 
 class Airship:
-    def __init__(self, FR, volume, lobes, velocity, altitude, payload, range):
+
+    def __init__(self, FR, volume, lobes, velocity, altitude, payload):
         """
         Initializes an Airship object.
 
@@ -98,17 +99,17 @@ class Airship:
         self.BR = 0.7 #self.buoyancy/self.Wg
         return self.buoyancy
 
+    def fuel_calculations(self):
+
+        self.fuel_total = 300
+        return self.fuel_total
+
     def prelimanary_weight(self):
 
         self.wzf = self.buoyancy / self.BR - self.fuelres
         self.woe = self.wzf - self.payload
         self.wg = self.wzf + self.fuel_total
         return self.wzf, self.woe, self.wg
-
-    def fuel_calculations(self):
-
-        fuel_total = 300
-        return self.fuel_total
 
     # Exercise/Line 19
     def calculate_lift(self):
@@ -122,7 +123,7 @@ class Airship:
         self.CL = self.L_aer0 / (self.q * self.reference_volume)
         self.CD = (self.CD0 + self.K * self.CL ** 2)
 
-        return self.L_a
+        return self.L_aer0
 
     # Exercise/Line 22
     def engine(self):
@@ -142,4 +143,16 @@ class Airship:
         self.P_hp_per_engine = ((self.CD*self.q*self.reference_volume) / (
                     self.n_engines * self.efficienty_eng)) / 550  # power required per engine in hp
         return self.P_hp_per_engine
+
+    def complete(self):
+
+        self.geomertic_parameters()
+        self.aerodynamic_properties()
+        self.buoyant_lift()
+        self.fuel_calculations()
+        self.prelimanary_weight()
+        self.calculate_lift()
+        self.engine()
+
+        return
 
