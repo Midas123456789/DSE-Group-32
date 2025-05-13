@@ -52,5 +52,17 @@ axs[1, 2].set_title('altitude vs Lb/D')
 plt.tight_layout()
 plt.show()
 
-#return
+plt.cla()
+plt.clf()
 
+volumes = np.linspace(1.001e5,2e8,10000)
+differences = np.zeros(len(volumes))
+airship = Airship(3, 1e5, 3, 84.5, 60000, 1000, 0.7)
+for i in range(len(volumes)):
+    differences[i] = airship.iterator([volumes[i]])
+plt.plot(volumes, differences)
+plt.grid()
+plt.xlabel('Volume (m^3)')
+plt.ylabel('Difference')
+plt.show()
+#return
