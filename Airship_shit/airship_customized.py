@@ -12,8 +12,8 @@ sibling_dir = os.path.join(parent_dir, 'Aerodynamic_Atmospheric')
 # Add the sibling directory to sys.path
 sys.path.insert(0, sibling_dir)
 
-# Now you can import the module from the sibling directory
 from ISA_Calculator import ISA_Calculator
+
 #from Aerodynamic_Atmospheric.ISA_Calculator import ISA_Calculator
 
 
@@ -148,7 +148,6 @@ class Airship:
     def buoyant_lift(self):
         """
         Calculates the buoyant lift of the airship.
-
         """
         self.buoyancy= self.gas_density*self.volume*self.density_sigma
   #self.buoyancy/self.Wg @ landin. assumption
@@ -169,14 +168,15 @@ class Airship:
         Outputs: lift (float): lift force in lbf
         """
         lift_aero = self.wg * (1-self.BR)  # lift available in lbf
-        self.density_sea = 0.002377
         #self.K = 0.295
         self.vmax = 1.1*self.velocity
-        self.qmax = 0.5 * self.density_sea * (self.vmax)**2  # dynamic pressure in lbf/ft²
+        self.qmax = 0.5 * self.density_sl * (self.vmax)**2  # dynamic pressure in lbf/ft²
         self.CL_maxpower = lift_aero / (self.qmax * self.reference_volume)  # lift coefficient at maximum power
         self.CL = lift_aero/(self.q*self.reference_volume)
         self.D_maxpower = (self.CD0 + self.K * self.CL_maxpower ** 2) * self.qmax * self.reference_volume  # drag force at maximum power in lbf
         self.CD = (self.CD0 + self.K * self.CL ** 2)
+        self.D = (self.CD0 + self.K * self.CL ** 2)*self.q*self.reference_volume
+
 
         return self.qmax, self.CL_maxpower, self.D_maxpower
 
@@ -197,7 +197,7 @@ class Airship:
         #self.D_maxpower = 13346
         self.P_hp_per_engine = ((self.D_maxpower * self.vmax) / (self.n_engines * self.efficienty_eng)) / 550  # power required per engine in hp
         self.P = self.P_hp_per_engine * 550  # Convert power from hp to ft-lbf/s
-        self.C_S = ((self.density_sea * self.velocity ** 5) / (self.P * self.n ** 2)) ** (1 / 5)  # speed coefficient [dimensionless]
+        self.C_S = ((self.density_sl * self.velocity ** 5) / (self.P * self.n ** 2)) ** (1 / 5)  # speed coefficient [dimensionless]
         self.J = 0.156 * self.C_S ** 2 + 0.241 * self.C_S + 0.138  # propeller advance ratio [dimensionless]
         self.D_prop = self.velocity / (self.J * self.n)  # propeller diameter in ft
         self.eta_prop = 0.139 * self.C_S ** 3 - 0.749 * self.C_S ** 2 + 1.37 * self.C_S + 0.0115  # propeller efficiency [dimensionless]
@@ -236,7 +236,6 @@ class Airship:
 
         # NOTE 16 oz = 1 lb, 1 yd² = 9 ft², 1.2 = manufacturing factor, 1.26 = attachements factor
         self.W_envelope = self.w_hull * self.wetsurface * 1.2 * 1.26 / (16 * 9)  # conversion to lbf/ft²
-
         self.f_septum = a * (1.5 * self.q_hull) + b
         self.W_septum = 2*1.06*self.f_septum*0.75*math.pi*self.ht*self.length/4/16/9
         self.W_body = self.W_envelope + self.W_septum
@@ -247,6 +246,8 @@ class Airship:
         #######
  
         self.vball = self.volume*((1/self.density_sigma-1))
+        assert self.vball > 0,  'Error: volume of ballonet is negative'
+
         self.nball = 2*self.n_lobes
         self.surfaceballonet = math.pi*(3*self.vball/math.pi/6)**(2/3)*self.nball
         self.W_ball = 0.035*self.surfaceballonet
@@ -272,6 +273,7 @@ class Airship:
         #######
         #5. engines, their mounts, controls, and prop
         #######
+        engine_power = 0.7457*self.P_hp_per_engine
         self.W_eng = self.n_engines*4.848*(self.P_hp_per_engine)**0.7956
         #self.W_eng_mount = 0.64*self.W_eng
         self.W_eng_mount = 1.2*self.W_eng #p272
@@ -282,6 +284,8 @@ class Airship:
         self.Kp = 31.92
         self.nblades = 3
         self.W_prop = self.Kp*self.n_engines*(self.nblades)**0.391*(self.D_prop*self.P_hp_per_engine/1000)**0.782
+
+
         #self.W_fueltank = 2.49*(self.fuel_total/6)**0.6 *(2)**0.2 *self.n_engines**0.13
 
 

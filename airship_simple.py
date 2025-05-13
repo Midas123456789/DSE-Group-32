@@ -28,7 +28,9 @@ class Airship:
         self.FR = FR
         self.n_lobes = lobes
         self.pound = 0.45359237
+        self.feet = 3.2808399
 
+        self.startvolume = startvolume
         self.volume = startvolume
         self.p = 1.6075
         self.reference_volume = self.volume ** (2 / 3)
@@ -42,7 +44,7 @@ class Airship:
         self.temperature = self.isa.results[self.altitude * 0.3048]['Temperature [K]']
         self.pressure = self.isa.results[self.altitude * 0.3048]['Pressure [Pa]']
         self.molarmass = 4.0026*10e-3 /self.pound
-        self.idealpresconstant = 8.31446261815324 / self.pound
+        self.idealpresconstant = 8.31446261815324 / (self.pound*self.feet**2)
         self.helium = (self.pressure*self.molarmass)/(self.molarmass*self.idealpresconstant)
 
         self.mu = 3.66 * 10 ** -7  # find out
@@ -65,38 +67,38 @@ class Airship:
         # Calculate basic geometric parameters
         volume = self.volume
         diameter_e = (6 * volume / (math.pi * self.FR)) ** (1 / 3)
-        length = self.FR * diameter_e
+        self.length = self.FR * diameter_e
         ratio = -0.0178 * self.n_lobes ** 2 + 0.361 * self.n_lobes + 0.575
 
         # Calculate the diameter of the airship
         diameter_c = diameter_e/ ratio
         width = (1 + self.n_lobes) * diameter_c / 2
-        self.asp_ratio = 4 * self.w ** 2 / (math.pi * length * width)
+        self.asp_ratio = 4 * width ** 2 / (math.pi * self.length * width)
 
         # Calculate wet surface area
-        surface = math.pi * ((length ** self.p * width ** self.p + length ** self.p * diameter_c ** self.p
+        surface = math.pi * ((self.length ** self.p * width ** self.p + self.length ** self.p * diameter_c ** self.p
                                    + width ** self.p * diameter_c ** self.p) / 3) ** (1 / self.p)
         ratioperimenter = 1.122 - 0.1226 * (1 / self.n_lobes)
-        wetsurface = ratioperimenter * self.surface
+        self.wetsurface = ratioperimenter * surface
 
 
-        return diameter_e, length, diameter_c, width, self.asp_ratio, surface, wetsurface
+        return diameter_e, length, diameter_c, width, self.asp_ratio, surface, self.wetsurface
 
 
-    def aerodynamic_properties(self, length, wetsurface, asp_ratio):
+    def aerodynamic_properties(self):
         """
         Calculates the aerodynamic properties of the airship.
 
         """
 
         self.q = 0.5 * self.density * (self.velocity ** 2)
-        Re = self.density * self.velocity * length / self.mu_cr
+        Re = self.density * self.velocity * self.length / self.mu_cr
         Cf = 0.455 / (math.log10(Re) ** 2.58)
         FFbody = 1 + 1.5 / self.FR ** 1.5 + 7 / self.FR ** 3
-        self.CD0 = FFbody * Cf * wetsurface / self.reference_volume
+        self.CD0 = FFbody * Cf * self.wetsurface / self.reference_volume
 
-        K = (-0.0146 * (1 / self.asp_ratio) ** 4 + 0.182 * (1 / self.asp_ratio) ** 3 - 0.514 * (1 / self.asp_ratio) ** 2 +
-                  0.838 * (1 / self.asp_ratio) - 0.053)
+        K = (-0.0146 * (1 / self.asp_ratio) ** 4 + 0.182 * (1 / self.asp_ratio) ** 3 - 0.514 * (1 / self.asp_ratio) **
+             2 + 0.838 * (1 / self.asp_ratio) - 0.053)
         self.K = K / self.NL
 
         return self.CD0
@@ -136,6 +138,14 @@ class Airship:
 
         return self.L_aer0
 
+    def complete(self):
+        self.geomertic_parameters()
+        self.aerodynamic_properties()
+        self.buoyancy_lift()
+        self.fuel_weight()
+        self.prelimanary_weight()
+        self.calculate_lift()
+        return
 
     def altitude_iteration(self):
 
@@ -144,13 +154,41 @@ class Airship:
         altitude = np.linspace(0, self.altitude, alt_step)
 
         for altitudes in altitude:
+            self.volume = self.gas_density/self.W_gas
             airship = Airship(self.FR, self.volume, self.n_lobes, self.velocity, altitudes, self.payload)
             airship.complete()
             print(airship.q)
             row = [altitudes, airship.volume, airship.wg, airship.CL, airship.CD]
-
             graph_df = np.vstack((graph_df, row))
 
+        graph_df = pd.DataFrame(graph_df, columns=['altitude', 'Volume', 'WeightG', 'CL', 'CD'])
+
+        fig, axes = plt.subplots(2, 2, figsize=(8, 6))
+        axes = axes.flatten()  # Flatten the 2x2 array of axes for easy indexing
+
+        # Create subplots: 2 rows, 2 columns
+        fig, axs = plt.subplots(2, 2, figsize=(10, 8))
+
+        # Plot in each subplot
+        axs[0, 0].plot(graph_df['Volume'], graph_df['altitude'])
+        axs[0, 0].set_title('altitude vs Volume')
+
+        axs[0, 1].plot(graph_df['WeightG'], graph_df['altitude'])
+        axs[0, 1].set_title('altitude vs WeightG')
+
+        axs[1, 0].plot(graph_df['CL'], graph_df['altitude'])
+        axs[1, 0].set_title('altitude vs CL')
+
+        axs[1, 1].plot(graph_df['CD'], graph_df['altitude'])
+        axs[1, 1].set_title('altitude vs CD')
+
+        # Adjust layout
+        plt.tight_layout()
+        plt.show()
+
+        return
 
 
-
+simplehybrid = Airship(3, 2e8, 3, 34.5, 40e3,1000)
+simplehybrid.complete()
+simplehybrid.altitude_iteration()
