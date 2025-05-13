@@ -38,7 +38,7 @@ plt.show()
 #def altitude_graph(self):
 alt_step = 1000
 graph_df = [0,0,0,0,0,0,0]
-altitudes = np.linspace(0, 20000, alt_step)
+altitudes = np.linspace(10000, 20000, alt_step)
 
 for altitude in altitudes:
     airship = Airship(3, 2e8, 3, 84.5, altitude * 3.28084, 1000, 0.7)

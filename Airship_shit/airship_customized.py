@@ -340,7 +340,7 @@ class Airship:
     def iterator(self,Volume):
         if abs(Volume) < abs(1e5):
             #print (f'Volume is too small: {Volume} ft³')
-            return 1e6*abs(1e5 - Volume)
+            return 1e6*abs(1e5 - Volume) + 1e6
         self.volume = abs(Volume[0])
         self.geomertic_parameters()
         self.tailvolume()
