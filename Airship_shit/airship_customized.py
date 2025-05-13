@@ -340,9 +340,9 @@ class Airship:
 
         return
     def iterator(self,Volume):
-        if abs(Volume) < abs(1e5):
+        if abs(Volume[0]) < abs(1e5):
             #print (f'Volume is too small: {Volume} ft³')
-            return 1e8*abs(1e5 - Volume) + 1e8
+            return 1e8*abs(1e5 - Volume[0]) + 1e8
         self.volume = abs(Volume[0])
         self.geomertic_parameters()
         self.tailvolume()
@@ -363,14 +363,14 @@ class Airship:
 
         #print(self)
 
-        return abs(self.wg - self.W_g2)
+        return self.wg - self.W_g2
 
 
     def iterate_to_exact(self):
         #fsolve(self.iterator,2000000,xtol=1e-3)
         #fmin(self.iterator,self.volume,maxiter=10000,disp=False)
-        #root(self.iterator, self.volume)
-        minimize(self.iterator, self.volume,)
+        root(self.iterator, self.volume)
+        #minimize(self.iterator, self.volume)
         return
 
     def __str__(self):
