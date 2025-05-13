@@ -1,8 +1,9 @@
 import math
-from scipy.optimize import root, minimize
+from scipy.optimize import root, minimize, fmin
 import sys
 import os
 import time
+from airship_power_required import PropPowerAirship
 
 # Get the absolute path of the parent directory
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -271,25 +272,7 @@ class Airship:
         gondola_surface = 2*(gondola_dimensions[0]*gondola_dimensions[1]+gondola_dimensions[0]*gondola_dimensions[2]+gondola_dimensions[1]*gondola_dimensions[2])
         #self.W_gond = 1.875*gondola_surface#p389
         self.W_gond = 0.15*self.payload #p287
-
-        #######
-        #5. engines, their mounts, controls, and prop
-        #######
-        engine_power = 0.7457*self.P_hp_per_engine
-        self.W_eng = self.n_engines*4.848*(self.P_hp_per_engine)**0.7956
-        #self.W_eng_mount = 0.64*self.W_eng
-        self.W_eng_mount = 1.2*self.W_eng #p272
-        le = 150 #dist between engines and their control in ft
-        self.W_ec = 60.27*(le*self.n_engines/100)**0.724
-        #self.W_start = 98
-
-        self.Kp = 31.92
-        self.nblades = 3
-        self.W_prop = self.Kp*self.n_engines*(self.nblades)**0.391*(self.D_prop*self.P_hp_per_engine/1000)**0.782
-
-
         #self.W_fueltank = 2.49*(self.fuel_total/6)**0.6 *(2)**0.2 *self.n_engines**0.13
-
 
         #######
         #6. pressure system
@@ -306,6 +289,26 @@ class Airship:
         #8. electrical system (needs Tristan's code)
         #######
         #self.W_Elect = 33.73*(470+500)**0.51
+        self.power = PropPowerAirship(self.CD, self.K, self.CL, self.velocity, self.density, self.wetsurface, self.efficienty_eng)
+        self.prop_power = self.power.prop_power()
+        self.power_required = self.power.total_power()
+
+        #######
+        # 5. engines, their mounts, controls, and prop
+        #######
+        self.P_hp_per_engine = self.prop_power / 0.745699872 / self.n_engines
+        self.W_eng = self.n_engines * 4.848 * (self.P_hp_per_engine) ** 0.7956
+        # self.W_eng_mount = 0.64*self.W_eng
+        self.W_eng_mount = 1.2 * self.W_eng  # p272
+        le = 150  # dist between engines and their control in ft
+        self.W_ec = 60.27 * (le * self.n_engines / 100) ** 0.724
+        # self.W_start = 98
+
+        self.Kp = 31.92
+        self.nblades = 3
+        self.W_prop = self.Kp * self.n_engines * (self.nblades) ** 0.391 * (
+                    self.D_prop * self.P_hp_per_engine / 1000) ** 0.782
+
         self.Wrfc = 600+300
 
         #######
@@ -362,15 +365,15 @@ class Airship:
             time.sleep(5)
 
         #print(self)
-
+        #print(self.power_required)
         return abs(self.wg - self.W_g2)
 
 
     def iterate_to_exact(self):
         #fsolve(self.iterator,2000000,xtol=1e-3)
-        #fmin(self.iterator,self.volume,maxiter=10000,disp=False)
+        fmin(self.iterator,self.volume,maxiter=10000,disp=False)
         #root(self.iterator, self.volume)
-        minimize(self.iterator, self.volume,)
+        #minimize(self.iterator, self.volume,)
         return
 
     def __str__(self):

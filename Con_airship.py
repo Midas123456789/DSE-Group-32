@@ -152,6 +152,7 @@ class Con_Airship:
         if self.fuel_total < 0:
             self.fuel_total = 0
             print(f"Fuel is negative: {self.fuel_total} lb")
+
         return self.fuel_total
 
     def weight_calculations(self):
