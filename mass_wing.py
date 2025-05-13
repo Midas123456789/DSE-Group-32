@@ -31,7 +31,7 @@ class Mass_wing(asb.Wing):
         root_R = self.root_R()
         return SF * M / math.pi / root_R ** 2 / max_stress
 
-    def spar_mass(self, L, b, SF=3, max_stress=100*10**6, density=1600):
+    def spar_mass(self, L, b, SF=3, max_stress=600*10**6, density=1600):
         root_R = self.root_R()
         tip_R = self.tip_R()
 
@@ -39,8 +39,9 @@ class Mass_wing(asb.Wing):
         num_sec = len(self.xsecs)
         span = self.span()
         spar_mass = 0
+        t_list = []
         for i in range(num_sec):
-            R = self.xsecs[i].chord * max(self.xsecs[i].airfoil.local_thickness()) / 2
+            R = self.xsecs[i].chord * np.max(self.xsecs[i].airfoil.local_thickness()) / 2
             Lx = L / span
             d = span * (num_sec - i) / (2 * num_sec)
             M_local = Lx * d ** 2 / 2
@@ -48,7 +49,8 @@ class Mass_wing(asb.Wing):
             sec_len = span / (2 * num_sec)
             section_mass = sec_len * (2 * math.pi * R * t) * density
             spar_mass += section_mass 
-            #print(R)
-        return spar_mass
+            t_list.append(t)
+        return spar_mass, t_list
  
+    
     
