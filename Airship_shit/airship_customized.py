@@ -41,7 +41,6 @@ class Airship:
         self.velocity = velocity
         self.altitude = altitude
         self.density = 0.00211              # problem for later density at
-        self.maxdensity = 0.001868
         self.density_sl = 0.002377 #slung/ft^2 # density at SL
         self.isa = ISA_Calculator(altitude=self.altitude*0.3048,velocity=self.velocity)
         self.density = self.isa.results[self.altitude*0.3048]['Density [kg/m³]']/515.35549
@@ -50,7 +49,7 @@ class Airship:
         self.mu_cr = 0.0209*self.isa.dynamic_viscosity(self.isa.results[self.altitude*0.3048]["Temperature [K]"])
         self.n_engines = 4
         self.NL = NLs[self.n_lobes]               # find out, it is a number according to number of lobes
-        self.gas_density =  0.0646 #lb/ft3 for helium at sea level
+        self.gas_density =  0.0711 #lb/ft3 for hydrogen at sea level
         self.fuelres = 1251        #find out later
         self.efficienty_eng = 0.65
         self.payload = payload
@@ -265,32 +264,72 @@ class Airship:
         #4. Gondola, payload bay
         #######
         gondola_dimensions = [5,3,2] #l,w,h in meters
-        self.W_crewstat = 1426
-        self.W_gond = 1.875*2*(55*10+55*10+10*10)
+        #self.W_crewstat = 1426
+        gondola_surface = 2*(gondola_dimensions[0]*gondola_dimensions[1]+gondola_dimensions[0]*gondola_dimensions[2]+gondola_dimensions[1]*gondola_dimensions[2])
+        #self.W_gond = 1.875*gondola_surface#p389
+        self.W_gond = 0.15*self.payload #p287
+
+        #######
+        #5. engines, their mounts, controls, and prop
+        #######
         self.W_eng = self.n_engines*4.848*(self.P_hp_per_engine)**0.7956
-        self.W_eng_mount = 0.64*self.W_eng
-        self.W_ec = 60.27*(150*self.n_engines/100)**0.724
-        self.W_start = 98
+        #self.W_eng_mount = 0.64*self.W_eng
+        self.W_eng_mount = 1.2*self.W_eng #p272
+        le = 150 #dist between engines and their control in ft
+        self.W_ec = 60.27*(le*self.n_engines/100)**0.724
+        #self.W_start = 98
 
         self.Kp = 31.92
         self.nblades = 3
         self.W_prop = self.Kp*self.n_engines*(self.nblades)**0.391*(self.D_prop*self.P_hp_per_engine/1000)**0.782
         #self.W_fueltank = 2.49*(self.fuel_total/6)**0.6 *(2)**0.2 *self.n_engines**0.13
+
+
+        #######
+        #6. pressure system
+        #######
         self.W_pressuresys = 0.02*self.woe
 
+        #######
+        #7. vms
+        #######
         #self.W_acls = 1.6*4057
-        self.W_vms = 1493
-        self.W_Elect = 33.73*(470+500)**0.51
+        self.W_vms = 0.04*self.woe #just from a graph in p289
+
+        #######
+        #8. electrical system (needs Tristan's code)
+        #######
+        #self.W_Elect = 33.73*(470+500)**0.51
+        self.Wrfc = 600+300
+
+        #######
+        #9. Miscallaneous
+        #######
         self.W_Msys = 0.05*self.woe
-        self.W_crew = 1148
+
+        #self.W_crew = 1148
         #self.W_fuel = 0.01*self.fuel_total
 
         #implement the RFC weight calculation
-        self.Wrfc = 600
 
-        self.W_margin = 0.06*self.woe
 
-        self.woe2 = self.W_body+self.W_ball+self.W_tails +self.W_crewstat+self.W_gond+self.W_eng+self.W_eng_mount+self.W_ec+self.W_start+self.W_prop+self.W_pressuresys+self.W_vms+self.W_Elect+self.W_Msys+self.W_crew+self.Wrfc
+        #self.W_margin = 0.06*self.woe
+
+        self.woe2 = self.W_body
+        self.woe2+=self.W_tails
+        self.woe2+=self.W_gond
+        self.woe2+=self.W_ball
+        self.woe2+=self.W_eng
+        self.woe2+=self.W_ec
+        self.woe2+=self.W_eng_mount
+        self.woe2+=self.W_prop
+        self.woe2+=self.W_pressuresys
+        #landing gear
+        self.woe2+=self.W_vms
+        self.woe2+=self.Wrfc
+        self.woe2+=self.W_Msys
+
+        
         self.W_g2 = self.woe2+self.payload
 
         return
