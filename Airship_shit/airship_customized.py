@@ -304,6 +304,7 @@ class Airship:
         self.W_ec = 60.27 * (le * self.n_engines / 100) ** 0.724
         # self.W_start = 98
 
+
         self.Kp = 31.92
         self.nblades = 3
         self.W_prop = self.Kp * self.n_engines * (self.nblades) ** 0.391 * (
