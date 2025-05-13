@@ -1,5 +1,5 @@
 import math
-from scipy.optimize import fsolve, fmin
+from scipy.optimize import root, minimize
 import sys
 import os
 import time
@@ -342,7 +342,7 @@ class Airship:
     def iterator(self,Volume):
         if abs(Volume) < abs(1e5):
             #print (f'Volume is too small: {Volume} ft³')
-            return 1e6*abs(1e5 - Volume) + 1e6
+            return 1e8*abs(1e5 - Volume) + 1e8
         self.volume = abs(Volume[0])
         self.geomertic_parameters()
         self.tailvolume()
@@ -368,7 +368,9 @@ class Airship:
 
     def iterate_to_exact(self):
         #fsolve(self.iterator,2000000,xtol=1e-3)
-        fmin(self.iterator,self.volume,maxiter=10000,disp=False)
+        #fmin(self.iterator,self.volume,maxiter=10000,disp=False)
+        #root(self.iterator, self.volume)
+        minimize(self.iterator, self.volume,)
         return
 
     def __str__(self):
