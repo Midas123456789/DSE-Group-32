@@ -32,16 +32,17 @@ class Airship:
         - n_eng (int): Number of engines
         - payload (float): Payload capacity in kilograms
         - altitude (float): Operating altitude in meters
+
         """
         NLs = {1:2,2:2.25,3:2.4,4:2.5,5:2.54}
         self.FR = FR
         self.BR = BR
         self.n_lobes = lobes
         self.volume = volume
-        self.p = 1.6075     
+        self.p = 1.6075                    # random value that is verified by the book
         self.reference_volume = self.volume**(2/3)
-        self.velocity = velocity
-        self.altitude = altitude
+        self.velocity = velocity            # in knots
+        self.altitude = altitude            # In feet
         self.density = 0.00211              # problem for later density at
         self.density_sl = 0.002377 #slung/ft^2 # density at SL
         self.isa = ISA_Calculator(altitude=self.altitude*0.3048,velocity=self.velocity)
@@ -114,7 +115,12 @@ class Airship:
         """
 
         self.q = 0.5 * self.density * (self.velocity**2)
+        assert self.q > 0, 'Dynamic pressure is subzero'
+
         self.Re = self.density*self.velocity*self.length/self.mu_cr
+        assert self.Re > 0, 'Reynolds number is subzero'
+
+
         self.Cf = 0.455 / (math.log10(self.Re)**2.58)
         self.FFbody = 1+ 1.5/self.FR**1.5+7/self.FR**3
         self.CD0 = self.FFbody * self.Cf * self.wetsurface / self.reference_volume
@@ -153,7 +159,7 @@ class Airship:
         Calculates the buoyant lift of the airship.
         """
         self.buoyancy= self.gas_density*self.volume*self.density_sigma
-  #self.buoyancy/self.Wg @ landin. assumption
+        #self.buoyancy/self.Wg @ landin. assumption
         return self.buoyancy
 
 
@@ -198,15 +204,10 @@ class Airship:
         # 550 = 550 ft-lbf/s = 1 hp
         self.n = 10
         #self.D_maxpower = 13346
-        self.P_hp_per_engine = ((self.D_maxpower * self.vmax) / (self.n_engines * self.efficienty_eng)) / 550  # power required per engine in hp
-        self.P = self.P_hp_per_engine * 550  # Convert power from hp to ft-lbf/s
-        self.C_S = ((self.density_sl * self.velocity ** 5) / (self.P * self.n ** 2)) ** (1 / 5)  # speed coefficient [dimensionless]
-        self.J = 0.156 * self.C_S ** 2 + 0.241 * self.C_S + 0.138  # propeller advance ratio [dimensionless]
-        self.D_prop = self.velocity / (self.J * self.n)  # propeller diameter in ft
-        self.eta_prop = 0.139 * self.C_S ** 3 - 0.749 * self.C_S ** 2 + 1.37 * self.C_S + 0.0115  # propeller efficiency [dimensionless]
+        #self.P_hp_per_engine = ((self.D_maxpower * self.vmax) / (self.n_engines * self.efficienty_eng)) / 550  # power required per engine in hp
 
 
-        return self.P_hp_per_engine
+        return
 
 
     # Exercise/Line 27
@@ -242,7 +243,6 @@ class Airship:
         self.f_septum = a * (1.5 * self.q_hull) + b
         self.W_septum = 2*1.06*self.f_septum*0.75*math.pi*self.ht*self.length/4/16/9
         self.W_body = self.W_envelope + self.W_septum
-
 
         #######
         #2. ballonet
@@ -297,6 +297,13 @@ class Airship:
         # 5. engines, their mounts, controls, and prop
         #######
         self.P_hp_per_engine = self.prop_power / 0.745699872 / self.n_engines
+        self.P = self.P_hp_per_engine * 550  # Convert power from hp to ft-lbf/s
+        self.C_S = ((self.density_sl * self.velocity ** 5) / (self.P * self.n ** 2)) ** (
+                    1 / 5)  # speed coefficient [dimensionless]
+        self.J = 0.156 * self.C_S ** 2 + 0.241 * self.C_S + 0.138  # propeller advance ratio [dimensionless]
+        self.D_prop = self.velocity / (self.J * self.n)  # propeller diameter in ft
+        self.eta_prop = 0.139 * self.C_S ** 3 - 0.749 * self.C_S ** 2 + 1.37 * self.C_S + 0.0115  # propeller efficiency [dimensionless]
+
         self.W_eng = self.n_engines * 4.848 * (self.P_hp_per_engine) ** 0.7956
         # self.W_eng_mount = 0.64*self.W_eng
         self.W_eng_mount = 1.2 * self.W_eng  # p272
@@ -334,6 +341,7 @@ class Airship:
         self.woe2+=self.W_eng_mount
         self.woe2+=self.W_prop
         self.woe2+=self.W_pressuresys
+
         #landing gear
         self.woe2+=self.W_vms
         self.woe2+=self.Wrfc
@@ -341,13 +349,17 @@ class Airship:
 
         
         self.W_g2 = self.woe2+self.payload
-
         return
+
     def iterator(self,Volume):
-        if abs(Volume) < abs(1e5):
+        if abs(Volume[0]) < abs(1e5):
             #print (f'Volume is too small: {Volume} ft³')
-            return 1e8*abs(1e5 - Volume) + 1e8
+            return 1e8*abs(1e5 - Volume[0]) + 1e8
+
+        #print(Volume)
+
         self.volume = abs(Volume[0])
+        self.reference_volume = self.volume**(2/3)
         self.geomertic_parameters()
         self.tailvolume()
         self.aerodynamic_properties()
@@ -374,6 +386,7 @@ class Airship:
         #fsolve(self.iterator,2000000,xtol=1e-3)
         #fmin(self.iterator,self.volume,maxiter=10000,disp=False)
         root(self.iterator, self.volume)
+        print(self.wg - self.W_g2)
         #minimize(self.iterator, self.volume)
         return
 
