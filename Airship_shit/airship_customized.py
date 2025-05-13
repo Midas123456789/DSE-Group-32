@@ -1,7 +1,8 @@
 import math
-from scipy.optimize import fsolve, fmin
+from scipy.optimize import root, minimize
 import sys
 import os
+import time
 
 # Get the absolute path of the parent directory
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -53,6 +54,7 @@ class Airship:
         self.fuelres = 1251        #find out later
         self.efficienty_eng = 0.65
         self.payload = payload
+        self.check = False
         #self.length = length
         #self.n_eng = n_eng
         #self.payload = payload
@@ -340,7 +342,7 @@ class Airship:
     def iterator(self,Volume):
         if abs(Volume) < abs(1e5):
             #print (f'Volume is too small: {Volume} ft³')
-            return 1e6*abs(1e5 - Volume) + 1e6
+            return 1e8*abs(1e5 - Volume) + 1e8
         self.volume = abs(Volume[0])
         self.geomertic_parameters()
         self.tailvolume()
@@ -351,11 +353,24 @@ class Airship:
         self.calculate_lift()
         self.engine()
         self.class2()
+
+        if self.check:
+
+            print(f'reference volume: {self.reference_volume} ft^3, surface area: {self.surface}, Re number: {self.Re}, '
+                  f'CD0: {self.CD0}, Lbuoy: {self.buoyancy}, WG1: {self.wg}, CLmax: {self.CL_maxpower}, '
+                  f'Dmax: {self.D_maxpower},WG2: {self.W_g2}, difference WG: {(self.wg - self.W_g2)}, CLa: {self.CL}')
+            time.sleep(5)
+
         #print(self)
+
         return abs(self.wg - self.W_g2)
+
+
     def iterate_to_exact(self):
         #fsolve(self.iterator,2000000,xtol=1e-3)
-        fmin(self.iterator,self.volume,maxiter=10000,disp=False)
+        #fmin(self.iterator,self.volume,maxiter=10000,disp=False)
+        #root(self.iterator, self.volume)
+        minimize(self.iterator, self.volume,)
         return
 
     def __str__(self):

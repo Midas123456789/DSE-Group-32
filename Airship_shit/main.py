@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
+#airship = Airship(3, 2e6, 3, 84.5, 4000, 40000, 0.7)
+#airship.iterate_to_exact()
+
+
 """
 hs = np.linspace(10000, 20000, 100)
 cls=np.zeros(len(hs))
@@ -41,7 +45,7 @@ graph_df = [0,0,0,0,0,0,0]
 altitudes = np.linspace(10000, 20000, alt_step)
 
 for altitude in altitudes:
-    airship = Airship(3, 2e8, 3, 84.5, altitude * 3.28084, 1000, 0.7)
+    airship = Airship(3,2e5, 3, 84.5, altitude * 3.28084, 1000, 0.7)
     airship.iterate_to_exact()
     print(airship)
     row = [altitude, airship.volume, airship.wg, airship.CL, airship.CD, (airship.buoyancy/airship.D), (airship.CL/airship.CD)]
@@ -80,4 +84,5 @@ axs[1, 2].set_title('altitude vs Lb/D')
 plt.tight_layout()
 plt.show()
 
-    #return
+#return
+
