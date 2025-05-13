@@ -7,7 +7,7 @@ def compute_propeller_power(D, rho, v_o, r):
     
     Parameters:
     - D: Required thrust [N]
-    - rho: Air density [kg/m³]
+    - rho: Air density [kg/m3]
     - v_o: Freestream velocity [m/s]
     - r: Propeller radius [m]
     

@@ -2,7 +2,7 @@
 from Aircraft_Aerodynamics import AircraftAerodynamic
 from Aero_plotting import plot_feasible_S_V, plot_A_LD, plot_h_V, plot_P_V, plot_h_V, plot_h_W
 from Aero_optim import optimize_velocity_for_min_drag, optimize_altitude_for_min_drag, parameter_sweep, determine_states_altitude, calculate_W, calculate_W_bat
-from Power_calculation import sweep_propeller_radius
+from Aerodynamic_Atmospheric.Aerodynamics.Power_calculation import sweep_propeller_radius
 import numpy as np
 from math import inf
 import aerosandbox as asb
