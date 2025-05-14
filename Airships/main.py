@@ -1,4 +1,4 @@
-from airship_customized import Airship
+from Airship import Airship
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np

@@ -1,18 +1,16 @@
 import math
-from scipy.optimize import root, minimize
+from scipy.optimize import root, minimize,fmin
 import sys
 import os
 import time
 from airship_power_required import PropPowerAirship
 
-# Get the absolute path of the parent directory
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-
-# Construct the path to the sibling directory
-sibling_dir = os.path.join(parent_dir, 'Aerodynamic_Atmospheric')
-
-# Add the sibling directory to sys.path
+sibling_dir = os.path.join(parent_dir, 'Aeorodynamic_Atmospheric')
+#sys.path.append(sibling_dir)
 sys.path.insert(0, sibling_dir)
+
+#sys.path.append(os.path.abspath(os.path.join('.', 'ISA_Calculator')))
 
 from ISA_Calculator import ISA_Calculator
 
@@ -28,46 +26,72 @@ class Airship:
         - FR (float): Fineness ratio
         - AR (float): Aspect ratio
         - volume (float): Volume of the airship in cubic meters
-        - length (float): Length of the airship in meters
-        - n_eng (int): Number of engines
-        - payload (float): Payload capacity in kilograms
+        - lobes (int): Number of lobes
+        - velocity (float): Velocity of the airship in kts
         - altitude (float): Operating altitude in meters
+        - payload (float): Payload weight in pounds
+        - BR (float): Buoyancy ratio (0-1) (buoyancy/total weight)
+        """
+        #region Assign the inputs
+        self.FR = FR
+        self.volume = volume
+        self.n_lobes = lobes
+        self.velocity = velocity
+        self.altitude = altitude
+        self.payload = payload
+        self.BR = BR
+        #endregion
+
+
+        #region constants
+        self.p = 1.6075 #perimeter ratio I think might be from a graph
+        self.check = False #for debugging
+
+
+        #endregion
+
+        #region assumptions
+
+        self.n_engines = 4
+        self.efficienty_eng = 0.65 #is this needed?
+        self.lifting_gas_constant =  0.0711 #lb/ft3 for hydrogen at sea level #used to be called gas density
+
+        self.tctail = 0.15  # find the formula later
+        self.ARtail = 1     # find aspect ratio later
+
+        self.max_to_cruise_velocity_ratio = 1.1 
+
+        #materials (done in class2)
+        self.FS = 4  # factor of safety. Book assumed this value for the envelope and septum
+        #septum assumtions in class 2
+
+        #ISA + conversion to slugs/ft^3
+        isa = ISA_Calculator(altitude=[self.altitude*0.3048,0],velocity=self.velocity*0.514444)
+        self.density = isa.results[self.altitude*0.3048]['Density [kg/m³]']/515.35549
+        self.density_sl = isa.results[0]['Density [kg/m³]']/515.35549 
+
+        #TODO: look more into mu0
+        self.mu = 3.66*10**-7               
+        self.mu_cr = 0.0209*isa.dynamic_viscosity(isa.results[self.altitude*0.3048]["Temperature [K]"])
+        self.density_sigma = self.density/self.density_sl
+
+        #endregion
+
+#region dependent properties
+    @property
+    def reference_volume(self):
+        """
+        Calculates the reference volume of the airship.
 
         """
+        return self.volume**(2/3)
+    @property
+    def NL(self):
         NLs = {1:2,2:2.25,3:2.4,4:2.5,5:2.54}
-        self.FR = FR
-        self.BR = BR
-        self.n_lobes = lobes
-        self.volume = volume
-        self.p = 1.6075                    # random value that is verified by the book
-        self.reference_volume = self.volume**(2/3)
-        self.velocity = velocity            # in knots
-        self.altitude = altitude            # In feet
-        self.density = 0.00211              # problem for later density at
-        self.density_sl = 0.002377 #slung/ft^2 # density at SL
-        self.isa = ISA_Calculator(altitude=self.altitude*0.3048,velocity=self.velocity)
-        self.density = self.isa.results[self.altitude*0.3048]['Density [kg/m³]']/515.35549
-        self.density_sigma = self.density/self.density_sl
-        self.mu = 3.66*10**-7               # find out
-        self.mu_cr = 0.0209*self.isa.dynamic_viscosity(self.isa.results[self.altitude*0.3048]["Temperature [K]"])
-        self.n_engines = 4
-        self.NL = NLs[self.n_lobes]               # find out, it is a number according to number of lobes
-        self.gas_density =  0.0711 #lb/ft3 for hydrogen at sea level
-        self.fuelres = 1251        #find out later
-        self.efficienty_eng = 0.65
-        self.payload = payload
-        self.check = False
-        #self.length = length
-        #self.n_eng = n_eng
-        #self.payload = payload
-        #self.altitude = altitude
-        #self.volume2_3 = self.volume ** (2 / 3)
+        # it is a number according to number of lobes helping compare reference volume to Splan
+        return NLs[self.n_lobes]
+#endregion
 
-        #Parameters for hybrid n_lobes >1
-
-
-
-    
     def geomertic_parameters(self):
         """
         Calculates the geometric parameters of the airship.
@@ -83,10 +107,16 @@ class Airship:
         self.ht = self.dc                           # diameter of the lobes
         self.w = (1+self.n_lobes)*self.dc/2
         self.AR = 4*self.w**2/(math.pi*self.length*self.w)
+        if self.n_lobes == 1:
+            self.AR = 4*self.de/(math.pi*self.length)
+            #fixed to allow for 1 lobe
+            self.ht = self.de
+            self.w = self.de
+
 
         # Calculate wet surface area
         self.surface = math.pi*((self.length**self.p*self.w**self.p + self.length**self.p*self.ht**self.p + self.w**self.p*self.ht**self.p)/3)**(1/self.p)
-        self.ratioperimenter = 1.122-0.1226*(1/self.n_lobes)
+        self.ratioperimenter = 1.122-0.1226*(1/self.n_lobes) if self.n_lobes > 1 else 1
         self.wetsurface = self.ratioperimenter * self.surface
 
         return self.de, self.length, self.dc, self.w, self.ht, self.AR, self.surface, self.wetsurface
@@ -108,11 +138,12 @@ class Airship:
         return self.CHT, self.CVT, self.lengthtail, self.surface_ht, self.surface_vt
 
 
-    def aerodynamic_properties(self):
+    def drag(self):
         """
         Calculates the aerodynamic properties of the airship.
 
         """
+        
 
         self.q = 0.5 * self.density * (self.velocity**2)
         assert self.q > 0, 'Dynamic pressure is subzero'
@@ -120,14 +151,14 @@ class Airship:
         self.Re = self.density*self.velocity*self.length/self.mu_cr
         assert self.Re > 0, 'Reynolds number is subzero'
 
-
+        #region cd0  body
         self.Cf = 0.455 / (math.log10(self.Re)**2.58)
         self.FFbody = 1+ 1.5/self.FR**1.5+7/self.FR**3
         self.CD0 = self.FFbody * self.Cf * self.wetsurface / self.reference_volume
+        #endregion
 
-        # Drag coefficient
-        self.tctail = 0.15  # find the formula later
-        self.ARtail = 1     # find aspect ratio later
+        #region cd0 tail
+        
         self.FFtail = 1 +1.2*self.tctail+100*self.tctail**4
         
         self.ctail = 0.5*((self.ARtail*self.surface_ht/2)**0.5 +(self.ARtail*self.surface_vt/2)**0.5)
@@ -136,18 +167,29 @@ class Airship:
 
         self.surfacewettails = 2.2*(self.surface_ht + self.surface_vt)
         self.CD0tail = self.FFtail * self.Cfetail * (self.surfacewettails) / self.reference_volume
+        #endregion
 
         # Calculate rest of CD0
+
+        #region cd0 rest
 
         self.CD0_cab_gond = (0.108 *self.CD0 * self.reference_volume + 7.7) / self.reference_volume
         self.CD0_eng_nac = (self.n_engines * 4.25) / self.reference_volume
         self.CD0_eng_cooling = (self.n_engines * (2e-6 * self.volume + 4.1)) / self.reference_volume
         self.CD0_eng_mount = (0.044 * self.CD0 * self.reference_volume + 0.92) / self.reference_volume
         self.CD0_cables = (9.7e-6 * self.volume + 10.22) / self.reference_volume
-        self.CD0_acls = 0.0002  # From the image
         self.CD0int = (4.78e-6 * self.volume)/self.reference_volume
 
-        self.CD0 = self.CD0 + self.CD0tail + self.CD0_cab_gond + self.CD0_eng_nac + self.CD0_eng_cooling + self.CD0_eng_mount + self.CD0_cables + self.CD0_acls + self.CD0int
+        #endregion
+        
+        self.CD0 = self.CD0
+        self.CD0 += self.CD0tail
+        self.CD0 +=self.CD0_cab_gond
+        self.CD0 +=self.CD0_eng_nac
+        self.CD0 +=self.CD0_eng_cooling
+        self.CD0 +=self.CD0_eng_mount
+        self.CD0 +=self.CD0_cables
+        self.CD0 +=self.CD0int
 
         self.K = -0.0146*(1/self.AR)**4+0.182*(1/self.AR)**3-0.514*(1/self.AR)**2+0.838*(1/self.AR)-0.053
         self.K = self.K/self.NL
@@ -158,12 +200,12 @@ class Airship:
         """
         Calculates the buoyant lift of the airship.
         """
-        self.buoyancy= self.gas_density*self.volume*self.density_sigma
+        self.buoyancy= self.lifting_gas_constant*self.volume*self.density_sigma
         #self.buoyancy/self.Wg @ landin. assumption
         return self.buoyancy
 
 
-    def weight_calculations(self):
+    def wg1(self):
         self.wg = self.buoyancy / self.BR
         self.br_takeoff = self.buoyancy/self.wg
         self.woe = self.wg - self.payload
@@ -178,8 +220,9 @@ class Airship:
         """
         lift_aero = self.wg * (1-self.BR)  # lift available in lbf
         #self.K = 0.295
-        self.vmax = 1.1*self.velocity
-        self.qmax = 0.5 * self.density_sl * (self.vmax)**2  # dynamic pressure in lbf/ft²
+
+        self.vmax = self.max_to_cruise_velocity_ratio*self.velocity
+        self.qmax = 0.5 * self.density* (self.vmax)**2  # dynamic pressure in lbf/ft²
         self.CL_maxpower = lift_aero / (self.qmax * self.reference_volume)  # lift coefficient at maximum power
         self.CL = lift_aero/(self.q*self.reference_volume)
         self.D_maxpower = (self.CD0 + self.K * self.CL_maxpower ** 2) * self.qmax * self.reference_volume  # drag force at maximum power in lbf
@@ -189,40 +232,20 @@ class Airship:
 
         return self.qmax, self.CL_maxpower, self.D_maxpower
 
-    # Exercise/Line 22
-    def engine(self):
-        """
-        Calculate the power required per engine at maximum velocity.
-        Inputs: Vmax (float): maximum velocity of the airship in ft/s
-                D_maxpower (float): drag force at maximum power in lbf
-                n_eng (float): engine efficiency [dimensionless]
-                NE (int): number of engines [#]
-        Outputs: P_per_engine (float): power required per engine in hp
-
-        """
-
-        # 550 = 550 ft-lbf/s = 1 hp
-        self.n = 10
-        #self.D_maxpower = 13346
-        #self.P_hp_per_engine = ((self.D_maxpower * self.vmax) / (self.n_engines * self.efficienty_eng)) / 550  # power required per engine in hp
-
-
-        return
-
 
     # Exercise/Line 27
     def class2(self):
         
 
         #######
-        #1. envelope and septums
+        #region 1. envelope and septums
         #######
         
         self.P_int = (1.2 * self.qmax + 0.0635 * self.ht)  # internal pressure in lbf/ft²
         self.P_int = self.P_int / 144  # Convert from lbf/ft² to psi
         self.height_inches = self.ht * 12  # Convert height from ft to inches
         # NOTE 1 ft = 12 inches
-        self.FS = 4  # factor of safety
+        
         self.q_hull = self.FS * self.P_int * (self.height_inches / 2)  # hull fabric load in psi
 
         material_strengths = {
@@ -234,38 +257,63 @@ class Airship:
         }
 
         # Linear relationship calculation using coefficients a and b
+        #select material for the envelope
         a = material_strengths['material']['a']
         b = material_strengths['material']['b']
         self.w_hull = a * self.q_hull + b
 
         # NOTE 16 oz = 1 lb, 1 yd² = 9 ft², 1.2 = manufacturing factor, 1.26 = attachements factor
         self.W_envelope = self.w_hull * self.wetsurface * 1.2 * 1.26 / (16 * 9)  # conversion to lbf/ft²
+
+        #select material for the septum
+        a = material_strengths['material']['a']
+        b = material_strengths['material']['b']
         self.f_septum = a * (1.5 * self.q_hull) + b
+
+        #assume 2 septums, area = 75% of the sideview area and 1.06 factor for seaming
         self.W_septum = 2*1.06*self.f_septum*0.75*math.pi*self.ht*self.length/4/16/9
+        if self.n_lobes == 1:
+            #assume 1 septum, area = 20% of the sideview area 
+            self.W_septum = self.f_septum*0.2*math.pi*self.ht*self.length/4/16/9
         self.W_body = self.W_envelope + self.W_septum
+        #endregion
 
         #######
-        #2. ballonet
+        #region 2. ballonet
         #######
+        #p269 says we do not need ballonets :DD 
+        #ignored in OEW buid up :DD
  
         self.vball = self.volume*((1/self.density_sigma-1))
         assert self.vball > 0,  'Error: volume of ballonet is negative'
 
         self.nball = 2*self.n_lobes
+        #assume 2 ballonet per lobe
+        #assume ballonet is a sphererical
         self.surfaceballonet = math.pi*(3*self.vball/math.pi/6)**(2/3)*self.nball
+        if self.n_lobes == 1:
+            #assume 2 ballonet per lobe
+            #assume ballonet is a semisphererical
+            self.surfaceballonet = (4*math.pi)**(1/3)*(self.vball*3)**(2/3)
         self.W_ball = 0.035*self.surfaceballonet
+        #endregion
 
         #######
-        #3. tails
+        #region 3. tails
         #######
+
+        #assume  a rigid space-frame structural tail concept
+        #assune control surfaces that are 20% of the total area
         self.faf = 1.26
-        self.W_ssf = (self.surface_ht+self.surface_vt)*self.faf*0.8
-        self.W_cs = (self.surface_ht+self.surface_vt)*0.2
+        self.fpsq = 1.0 #lb/ft^2
+        self.W_ssf = self.fpsq*(self.surface_ht+self.surface_vt)*self.faf*0.8
+        self.W_cs = self.fpsq*(self.surface_ht+self.surface_vt)*0.2
         self.W_tails = self.W_ssf + self.W_cs
         self.W_act = 1.15*(self.surface_ht+self.surface_vt)*0.79*0.2 #actuator weight, (part of VMS)
+        #endregion
 
         #######
-        #4. Gondola, payload bay
+        #region 4. Gondola, payload bay
         #######
         gondola_dimensions = [5,3,2] #l,w,h in meters
         #self.W_crewstat = 1426
@@ -273,7 +321,7 @@ class Airship:
         #self.W_gond = 1.875*gondola_surface#p389
         self.W_gond = 0.15*self.payload #p287
         #self.W_fueltank = 2.49*(self.fuel_total/6)**0.6 *(2)**0.2 *self.n_engines**0.13
-
+        #endregion
         #######
         #6. pressure system
         #######
@@ -283,16 +331,21 @@ class Airship:
         #7. vms
         #######
         #self.W_acls = 1.6*4057
-        self.W_vms = 0.04*self.woe #just from a graph in p289
+        self.W_vms = 0.03*self.woe+self.W_act #just from a graph in p289
 
         #######
         #8. electrical system (needs Tristan's code)
         #######
         #self.W_Elect = 33.73*(470+500)**0.51
+
+        #powers and shit
+        self.n = 10
+        if self.n_engines == 1:
+            self.n = 20
         self.power = PropPowerAirship(self.CD, self.K, self.CL, self.velocity, self.density, self.wetsurface, self.efficienty_eng)
         self.prop_power = self.power.prop_power()
         self.power_required = self.power.total_power()
-
+        self.Wrfc = 600+300
         #######
         # 5. engines, their mounts, controls, and prop
         #######
@@ -317,7 +370,7 @@ class Airship:
         self.W_prop = self.Kp * self.n_engines * (self.nblades) ** 0.391 * (
                     self.D_prop * self.P_hp_per_engine / 1000) ** 0.782
 
-        self.Wrfc = 600+300
+        
 
         #######
         #9. Miscallaneous
@@ -327,15 +380,13 @@ class Airship:
         #self.W_crew = 1148
         #self.W_fuel = 0.01*self.fuel_total
 
-        #implement the RFC weight calculation
-
 
         #self.W_margin = 0.06*self.woe
 
         self.woe2 = self.W_body
         self.woe2+=self.W_tails
         self.woe2+=self.W_gond
-        self.woe2+=self.W_ball
+        #self.woe2+=self.W_ball
         self.woe2+=self.W_eng
         self.woe2+=self.W_ec
         self.woe2+=self.W_eng_mount
@@ -354,20 +405,19 @@ class Airship:
     def iterator(self,Volume):
         if abs(Volume[0]) < abs(1e5):
             #print (f'Volume is too small: {Volume} ft³')
-            return 1e8*abs(1e5 - Volume[0]) + 1e8
+            return -(1e8*abs(1e5 - Volume[0]) + 1e8)
 
         #print(Volume)
 
         self.volume = abs(Volume[0])
-        self.reference_volume = self.volume**(2/3)
+        #self.reference_volume = self.volume**(2/3)
         self.geomertic_parameters()
         self.tailvolume()
-        self.aerodynamic_properties()
+        self.drag()
         self.buoyant_lift()
-        self.weight_calculations()
+        self.wg1()
         #WG1 found above
         self.calculate_lift()
-        self.engine()
         self.class2()
 
         if self.check:
@@ -386,7 +436,7 @@ class Airship:
         #fsolve(self.iterator,2000000,xtol=1e-3)
         #fmin(self.iterator,self.volume,maxiter=10000,disp=False)
         root(self.iterator, self.volume)
-        print(self.wg - self.W_g2)
+        #print(self.wg - self.W_g2)
         #minimize(self.iterator, self.volume)
         return
 
