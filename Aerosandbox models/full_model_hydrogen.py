@@ -2,24 +2,23 @@ import aerosandbox as asb
 import aerosandbox.numpy as np
 from mass_wing import Mass_wing
 
-def get_LH_tandem(N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altitude = 18000, mission_days = 10, W_payload = 1000, P_payload = 10e3):
+def get_LH_conventional(N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altitude = 18000, mission_days = 10, W_payload = 1000, P_payload = 10e3):
     g = 9.81
     atm = asb.Atmosphere(altitude=altitude)
     opti = asb.Opti()
-    Tail_drag_factor = 1.03
+    Tail_drag_factor = 1.1
     second_in_day = 86400
+    mission_days = 10
     mission_seconds = mission_days * second_in_day
-
     density_LH = 70.85 #kg/m3
     energy_density_LH = 142 * 10 ** 6 #J/kg
-    #fuel_tank_wall_thickness = 0.0612  # from Brewer, Hydrogen Aircraft Technology pg. 203
     power_density_PEMFCs = 40000 #W/kg
     PEMFCs_eff = 0.55
     motor_eff = 0.97 #Fundamentals of Aircraft and Airship Design
     propeller_eff = 0.85 #Fundamentals of Aircraft and Airship Design
     conversion_eff = PEMFCs_eff
     propulsive_eff = conversion_eff * motor_eff * propeller_eff
-    fuel_tank_fuel_mass_fraction = 0.34  # from Brewer, Hydrogen Aircraft Technology pg. 30
+    fuel_tank_fuel_mass_fraction = 0.34  # from Brewer, Hydrogen Aircraft Technology pg. 29
 
     # === Design Variables === #
     cords = opti.variable(init_guess=3 * np.ones(N_cords), n_vars=N_cords)
@@ -29,7 +28,7 @@ def get_LH_tandem(N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altitude = 
 
     # === Geometry Setup === #
     y_sections = np.linspace(0, b / 2, N_cords)
-    wing1 = Mass_wing(
+    wing = Mass_wing(
         symmetric=True,
         xsecs=[
             asb.WingXSec(
@@ -41,30 +40,26 @@ def get_LH_tandem(N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altitude = 
         ]
     ).translate([0, 0, 0])
 
-    wing2 = Mass_wing(
-        symmetric=True,
-        xsecs=[
-            asb.WingXSec(
-                xyz_le=[-0.25 * cords[i], y_sections[i], 0],
-                chord=cords[i],
-                airfoil=wing_airfoil
-            )
-            for i in range(N_cords)
-        ]
-    ).translate([7, 0, 0])
-
-    wings = [wing1] + [wing2]
+    # === Constraints === #
+    opti.subject_to([
+        cords > 0,
+        np.diff(cords) <= 0,  # Taper
+        wing.area() < 2000
+    ])
+    if False:
+        wings = [wing] + tail
+    else:
+        wings = [wing]
     airplane = asb.Airplane(wings=wings)
+
 
     # === Aerodynamics === #
     op = asb.OperatingPoint(velocity=V, alpha=alpha, atmosphere=atm)
     aero = asb.AeroBuildup(airplane=airplane, op_point=op).run()
-    
-    total_area = wing1.area() + wing2.area()
-    
+
     # === Lift & Drag Forces === #
-    L = 0.5 * atm.density() * V**2 * aero['CL'] * total_area
-    D = 0.5 * atm.density() * V**2 * aero['CD'] * total_area * Tail_drag_factor
+    L = 0.5 * atm.density() * V**2 * aero['CL'] * wing.area()
+    D = 0.5 * atm.density() * V**2 * aero['CD'] * wing.area() * Tail_drag_factor
 
     # === Payload Power === #
 
@@ -79,12 +74,11 @@ def get_LH_tandem(N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altitude = 
 
     # === Skin Weight === #
     skin_density = 0.25  # kg/m², adjust based on material
-    W_skin = 2 * total_area * skin_density * g
+    W_skin = 2 * wing.area() * skin_density * g
 
     # === Wing Weight === #
-    spar_mass, t_list = wing1.spar_mass(L/2, b)
-    spar_mass_total = 2 * spar_mass
-    W_spar = spar_mass_total * g   
+    spar_mass, t_list = wing.spar_mass(L, b)
+    W_spar = spar_mass * g   
     W_wing = W_spar + W_skin
     M_fuel_cell = E_LH / mission_seconds / power_density_PEMFCs
     W_fuel_cell = M_fuel_cell * g
@@ -98,21 +92,23 @@ def get_LH_tandem(N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altitude = 
     opti.subject_to([
     cords > 0,
     np.diff(cords) <= 0,  # Taper
-    total_area < 2000
+    wing.area() < 2000
     ])
-
+    
+    wing_area = wing.area()
+    CL = aero['CL']
+    CD = aero['CD'] * Tail_drag_factor
+    
     # === Objective === #
     opti.minimize(P_required)
     # === Solve === #
     sol = opti.solve(verbose=False)
-    CD = aero["CD"] * Tail_drag_factor
-    CL = aero["CL"]
     return {
     "cords": sol.value(cords),
     "b": sol.value(b),
     "V": sol.value(V),
     "alpha": sol.value(alpha),
-    "wing_area": sol.value(total_area),
+    "wing_area": sol.value(wing.area()),
     "CL": sol.value(CL),
     "CD": sol.value(CD),
     "L": sol.value(L),
@@ -134,7 +130,7 @@ def get_LH_tandem(N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altitude = 
 
 if __name__ == "__main__":
     # === Unpack Results from Dictionary ===
-    results = get_LH_tandem()
+    results = get_LH_conventional()
 
     cords_sol = results["cords"]
     b_sol = results["b"]
@@ -178,20 +174,8 @@ if __name__ == "__main__":
             for i in range(len(cords_sol))
         ]
     ).translate([4, 0, 0])
-    
-    wing_sol2 = Mass_wing(
-        symmetric=True,
-        xsecs=[
-            asb.WingXSec(
-                xyz_le=[-0.25 * cords_sol[i], y_sections_sol[i], 0],
-                chord=cords_sol[i],
-                airfoil=wing_airfoil
-            )
-            for i in range(len(cords_sol))
-        ]
-    ).translate([14, 0, 0])
 
-    airplane_sol = asb.Airplane(wings=[wing_sol] + [wing_sol2])
+    airplane_sol = asb.Airplane(wings=[wing_sol])
 
     # === Output Results ===
     print("\n" + "="*35)
