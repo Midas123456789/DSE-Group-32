@@ -4,6 +4,8 @@ import sys
 import os
 import time
 from airship_power_required import PropPowerAirship
+from RFC_model import RFC
+from solar_power_model import Power
 
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sibling_dir = os.path.join(parent_dir, 'Aerodynamic_Atmospheric')
@@ -336,7 +338,7 @@ class Airship:
         self.W_vms = 0.03*self.woe+self.W_act #just from a graph in p289
 
         #######
-        #8. electrical system (needs Tristan's code)
+        #region 8. electrical system (needs Tristan's code)
         #######
         #self.W_Elect = 33.73*(470+500)**0.51
 
@@ -347,7 +349,20 @@ class Airship:
         self.power = PropPowerAirship(self.CD, self.K, self.CL, self.velocity, self.density, self.wetsurface, self.efficienty_eng)
         self.prop_power = self.power.prop_power()
         self.power_required = self.power.total_power()
-        self.Wrfc = 600+300
+        
+        power_model = Power(latitude=60, day_of_year=1, power_required=self.power_required*1000, area=30000)
+        rfc = RFC(power_model)
+
+        area = rfc.compute_solar_array_area()
+        # Step 4: Rebuild the model with the correct profile
+        power_model = Power(latitude=40, day_of_year=1, power_required=self.power_required*1000, area = area)
+        self.rfc = RFC(power_model)
+        self.Wrfc = (rfc.rfc_mass_kg()+rfc.solar_panel_mass()) * 2.20462
+        
+        
+        
+
+        #endregion
         #######
         # 5. engines, their mounts, controls, and prop
         #######
@@ -440,6 +455,7 @@ class Airship:
         root(self.iterator, self.volume)
         #print(self.wg - self.W_g2)
         #minimize(self.iterator, self.volume)
+        #print(f'for h= {self.altitude} m, power required: {self.power_required} kW, Wrfc: {self.Wrfc} lb')
         return
 
     def __str__(self):
