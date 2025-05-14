@@ -2,7 +2,7 @@ import aerosandbox as asb
 import aerosandbox.numpy as np
 from mass_wing import Mass_wing
 
-def get_LH_conventional(N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altitude = 18000, mission_days = 10):
+def get_LH_conventional(N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altitude = 18000, mission_days = 10, W_payload = 1000, P_payload = 10e3):
     g = 9.81
     atm = asb.Atmosphere(altitude=altitude)
     opti = asb.Opti()
@@ -10,8 +10,6 @@ def get_LH_conventional(N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altit
     second_in_day = 86400
     mission_days = 10
     mission_seconds = mission_days * second_in_day
-    W_payload = 1000  # N
-    P_payload = 10000  # Watts, constant power for onboard systems
     density_LH = 70.85 #kg/m3
     energy_density_LH = 142 * 10 ** 6 #J/kg
     power_density_PEMFCs = 40000 #W/kg
@@ -91,6 +89,12 @@ def get_LH_conventional(N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altit
     W_total = W_payload + W_wing + W_LH + W_misc + W_tank + W_fuel_cell
     opti.subject_to(L >= W_total)
     
+    opti.subject_to([
+    cords > 0,
+    np.diff(cords) <= 0,  # Taper
+    wing.area() < 2000
+    ])
+    
     wing_area = wing.area()
     CL = aero['CL']
     CD = aero['CD'] * Tail_drag_factor
@@ -123,7 +127,7 @@ def get_LH_conventional(N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altit
     "Airfoil": wing_airfoil,
     "Altitude": altitude,
     "Atm": atm
-}
+    }
 
 
 # === Unpack Results from Dictionary ===
