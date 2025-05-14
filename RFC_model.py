@@ -66,7 +66,7 @@ class RFC:
 
          return energy_required_electrolysis_W
      
-     def compute_solar_array_area(self, base_power=40000, efficiency=0.30, solar_constant=1300):
+     def compute_solar_array_area(self, base_power=100000, efficiency=0.30, solar_constant=1300):
         elevation = self.power_model._solar_elevation()
         raw_irradiance = np.sin(elevation) * solar_constant
         raw_irradiance[elevation <= 0] = 0
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     # Replace power_required with real data or a test profile
     time = np.arange(86400)
 
-    power_required = [40000 for i in range(86400)]
+    power_required = [100000 for i in range(86400)]
 
     power_model = Power(latitude=40, day_of_year=1, power_required=power_required, area=30000)
     rfc = RFC(power_model)
@@ -118,6 +118,8 @@ if __name__ == "__main__":
     print(f"Average Power Generated (W): {average_power_W}")
     print(power_model.max_deficit())
     print(rfc.energy_deficit_kWh())
+    print(rfc.solar_panel_mass())
+    print(rfc.power_model.area)
         
     
 
