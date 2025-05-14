@@ -123,7 +123,7 @@ plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
 
 for i in range(len(problematic_airships)):
     airship = problematic_airships[i]
-    vols= np.linspace(airship.volume*0.5, 2e7,100)
+    vols= np.linspace(airship.volume*0.5, 5e6,100)
     diffs = np.zeros(len(vols))
     for i in range(len(vols)):
         
@@ -134,6 +134,6 @@ plt.ylabel('Difference in Weight (lb)')
 plt.title('Difference in Weight vs Volume')
 plt.grid()
 plt.legend()
-plt.ylim(-3e5, 3e5)
+plt.ylim(-3e4, 3e4)
 plt.show()
 print('idk')

@@ -11,7 +11,7 @@ class PropPowerAirship:
         self.rho = rho
         self.airship_refrencearea = airship_refrencearea
         self.prop_efficiency = prop_efficiency
-        self.payload = 20       #KW
+        self.payload = 2.75       #KW
 
     
     def prop_power(self):

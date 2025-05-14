@@ -6,9 +6,11 @@ import time
 from airship_power_required import PropPowerAirship
 
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sibling_dir = os.path.join(parent_dir, 'Aeorodynamic_Atmospheric')
+sibling_dir = os.path.join(parent_dir, 'Aerodynamic_Atmospheric')
 #sys.path.append(sibling_dir)
 sys.path.insert(0, sibling_dir)
+
+from ISA_Calculator import ISA_Calculator
 
 #sys.path.append(os.path.abspath(os.path.join('.', 'ISA_Calculator')))
 
