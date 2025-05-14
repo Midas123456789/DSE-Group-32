@@ -86,7 +86,7 @@ class RFC:
         """
         Calculate the mass of the solar panels.
         """
-        # Assuming a specific mass of 10 kg/m² for solar panels
+        # Assuming a specific mass of 0.8 kg/m² for solar panels
         specific_mass = 0.8
         area = self.power_model.area
         return area * specific_mass
@@ -99,7 +99,7 @@ if __name__ == "__main__":
 
     power_required = [100000 for i in range(86400)]
 
-    power_model = Power(latitude=40, day_of_year=1, power_required=power_required, area=30000)
+    power_model = Power(latitude=60, day_of_year=1, power_required=power_required, area=30000)
     rfc = RFC(power_model)
 
     area = rfc.compute_solar_array_area()
