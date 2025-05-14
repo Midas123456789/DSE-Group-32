@@ -87,17 +87,23 @@ class ISA_Calculator:
         result["Reynolds Number"] = (result["Density [kg/m3]"] * V * L) / mu
     
     def __str__(self):
-        output = ["ISA Calculator Results:\n"]
-        for altitude, res in self.results.items():
-            output.append(f"Altitude: {altitude} m")
+        output = ["\n"]
+        output.append("ISA Calculator Results:")
+        for altitude in sorted(self.results):
+            res = self.results[altitude]
+            output.append(f"Altitude: {altitude:.0f} m")
             max_key_length = max(len(key) for key in res)
             header = f"{'Parameter'.ljust(max_key_length)} | Value"
             output.append(header)
             output.append("-" * len(header))
             for key, value in res.items():
-                output.append(f"{key.ljust(max_key_length)} | {value:>13,.5f}")
+                try:
+                    output.append(f"{key.ljust(max_key_length)} | {value:>13,.5f}")
+                except (ValueError, TypeError):
+                    output.append(f"{key.ljust(max_key_length)} | {'N/A':>13}")
             output.append("")
         return "\n".join(output)
+
     
     def plot(self):
         """ Visualize the ISA properties """

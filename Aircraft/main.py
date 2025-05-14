@@ -1,6 +1,7 @@
 # main.py
 
 from Requirements import Requirements
+from ISA_Calculator import ISA_Calculator
 
 from Weight_Estimations.Class_I_Weight_Estimation import Class_I_Weight_Estimation
 from Weight_Estimations.Class_II_Weight_Estimation import ClassIIWeightEstimation
@@ -8,7 +9,7 @@ from Weight_Estimations.Class_II_Weight_Estimation import ClassIIWeightEstimatio
 from Aerodynamics.Aircraft_Aerodynamics import AircraftAerodynamic
 from Aerodynamics.Aero_plotting import plot_h_Preq, plot_A_LD, plot_feasible_S_V, plot_h_V, plot_h_W, plot_P_V
 
-from ISA_Calculator import ISA_Calculator
+from Others.WP_WS_diagram import WP_WS_Diagram
 from Others.Performance import Performance
 
 
@@ -49,32 +50,15 @@ class Aircraft:
             iteration_limit=100, tolerance=0.01,
         )
 
-        print(f"[0] MTOM: {self.class_I.estimated_MTOM:.2f} kg | "
-            f"OEW_frac: {(self.class_I.estimated_OEM / self.class_I.estimated_MTOM):.3f} | "
-            f"Battery mass: {self.class_I.battery_mass_kg:.2f} kg | Δ: None")
-
         self.aero = AircraftAerodynamic(
             W=self.class_I.estimated_MTOM,
-            h=inputs.h_cruise,
+            h=inputs.h_cruise, n_p=inputs.n_p,
             S=inputs.S, A=inputs.A, e=inputs.e,
             CD0=inputs.CD0, CL=inputs.CL_cruise
         )
 
         # Performance and aerodynamics
         self.performance = Performance(self)
-        
-        # Class II weight estimation
-        self.class_II = ClassIIWeightEstimation(
-            payload_weight_kg=inputs.payload_weight_kg,
-            battery_mass_kg=self.performance.battery_mass_kg,
-            S=inputs.S, A=inputs.A, g=self.g,
-            fuselage_length=inputs.fuselage_length,
-            fuselage_diameter=inputs.fuselage_diameter,
-            initial_mtow_guess_kg=self.class_I.estimated_MTOM,
-            W1_WTO=inputs.W1_WTO, W2_W1=inputs.W2_W1, W3_W2=inputs.W3_W2,
-            W4_W3=inputs.W4_W3, W5_W4=inputs.W5_W4, W6_W5=inputs.W6_W5,
-            W7_W6=inputs.W7_W6, W8_W7=inputs.W8_W7, Wfinal_W8=inputs.Wfinal_W8
-        )
 
 if __name__ == "__main__":
     req = Requirements()
@@ -85,8 +69,8 @@ if __name__ == "__main__":
         
         # Weights
         payload_weight_kg=req.payload_weight_kg,
-        initial_mtow_guess_kg=15 * req.payload_weight_kg,
-        empty_weight_fraction=0.7,
+        initial_mtow_guess_kg=10 * req.payload_weight_kg,
+        empty_weight_fraction=0.2,
         
         # Batteries
         battery_power_available=req.power_available,
@@ -94,11 +78,20 @@ if __name__ == "__main__":
         
         # Currently not using fuel!!!
         residual_fuel_fraction=0.00,
-        W1_WTO=1, W2_W1=1, W3_W2=1, W4_W3=1, W5_W4=1,W6_W5=1, W7_W6=1, W8_W7=1, Wfinal_W8=1,
+        W1_WTO=0.997,
+        W2_W1=0.995,
+        W3_W2=0.996,
+        W4_W3=0.998,
+        W5_W4=0.931,
+        W6_W5=0.999,
+        W7_W6=0.998,
+        W8_W7=0.995,
+        Wfinal_W8=0.997,
         
         # Propulsion system
         n_p=0.85, 
         c_p=0.6,
+        sfc_kg_per_kw_hr=0.2,
         
         # Design parameters
         CL_cruise=1.2, 
@@ -111,34 +104,61 @@ if __name__ == "__main__":
         A=25, 
         e=0.85,
         chord_length=3, 
-        fuselage_length=2, 
-        fuselage_diameter=0.001,
+        #fuselage_length=4, 
+        #fuselage_diameter=0.001,
         
         # Choice
         h_cruise=15000,
+        propulsion_type='hydrogen',
         
     )
     ac = Aircraft(inputs)
     
-    convergence_rate = 0.01
-    break_value = 100
-    counter = 0
-    while counter <= break_value:
-        counter += 1
+    #print(50 * '-')
+    #print(f"MTOM [kg]: {ac.class_I.estimated_MTOM:.2f} kg")
+    #print(f"Payload mass [kg]: {req.payload_weight_kg:.2f} kg")
+    #print("")
+    #print(f"Battery mass required to fly for {req.endurance * 24} hours without recharging [kg]: {ac.performance.battery_mass_kg:.2f} kg")
+    #print(f"Hydrogen fuel mass required to fly for {req.endurance * 24} hours without refuelling [kg]: {ac.performance.hydrogen_mass_kg:.2f} kg")
+    #print(f"Hydrogen tank mass required to fit {ac.performance.hydrogen_mass_kg:.2f} kg: {ac.performance.hydrogen_tank_mass_kg:.2f} kg")
+    #print(f"Cruise velocity for maximum endurance [m/s]: {ac.performance.optimum_V:.2f} m/s")
+    #print(50 * '-')
     
-    ac.performance.plot_drag_to_power_for_max_endurance()
+    print(ac.ISA)
+    print(ac.class_I)
+    print(ac.aero)
+    print(ac.performance)
     
-    print(50 * '-')
-    print(f"MTOM [kg]: {ac.class_II.estimated_MTOM:.2f} kg")
-    print(f"Payload mass [kg]: {ac.class_II.payload_weight_kg:.2f} kg")
-    print(f"Fuel mass used [kg]: {ac.class_II.estimated_fuel_weight_kg:.2f} kg")
-    print(f"Battery mass [kg]: {ac.class_II.estimated_battery_mass_kg:.2f} kg")
-    print("")
-    print(f"Battery power required [W]: {ac.performance.battery_power_required:.2f} W")
-    print(f"Cruise velocity for maximum endurance [m/s]: {ac.performance.optimum_V:.2f} m/s")
-    print(50 * '-')
     
-    # TODO: fix the weird values for P_req and create iteration
-    # The weird values were caused by the fact you made it like you're flying 7 days on one charge!!! you should differentiate this
-    # Implement recharging
     
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    """
+    WP_WS_Diagram(V_cruise       = ac.performance.optimum_V, 
+                V_stall          = 30, 
+                climb_rate       = 5, 
+                climb_gradient   = 0.01, 
+                e                = ac.inputs.e, 
+                CD0              = ac.inputs.CD0, 
+                h                = ac.inputs.h_cruise, 
+                CL_MAX_clean     = ac.inputs.CL_cruise, 
+                CL_MAX_land      = ac.inputs.CL_land, 
+                CL_MAX_TO        = ac.inputs.CL_TO, 
+                A_design         = ac.inputs.A, 
+                TOP              = 150, 
+                landing_distance = 700, 
+                f                = 1, 
+                n_p              = ac.inputs.n_p, 
+                prop_setting     = 1,
+                rho              = ac.rho,
+                )"""

@@ -20,7 +20,7 @@ class Class_I_Weight_Estimation():
         self.battery_power_available = battery_power_available
         self.battery_specific_energy_Wh_per_kg = battery_specific_energy_Wh_per_kg
         self.battery_mass_kg = ((battery_power_available * (endurance * 24)) / battery_specific_energy_Wh_per_kg) if battery_specific_energy_Wh_per_kg > 0 else 0
-        print(self.battery_mass_kg)
+        
         # Inputs for first weight estimation
         self.fuel_fraction = 1 - (W1_WTO * W2_W1 * W3_W2 * W4_W3 * W5_W4 * W6_W5 * W7_W6 * W8_W7 * Wfinal_W8)
         self.residual_fuel_fraction = residual_fuel_fraction
@@ -83,6 +83,10 @@ class Class_I_Weight_Estimation():
             self.results["Operation Empty Weight [kg]"] = round(self.estimated_OEM, 3)
             self.results["Fuel Weight [kg]"] = round(self.estimated_fuel_mass, 3)
             self.results["Battery Mass [kg]"] = round(self.battery_mass_kg, 3)
+        else:
+            print(50*"-")
+            print("Stopped in Class I, MTOW diverged!!")
+            print(50*"-") 
     
     def Determine_Used_Fuel(self):
         M_ff = (self.W1_WTO * self.W2_W1 * self.W3_W2 * self.W4_W3 *
@@ -99,24 +103,36 @@ class Class_I_Weight_Estimation():
     def Determine_Maximum_Lift_Drag_Ratio(self):
         self.L_D = np.sqrt((np.pi * self.A * self.e) / (4 * self.CD0))
     
-    def Determine_Brequet_Range(self):
-        self.Determine_Maximum_Lift_Drag_Ratio()
-        self.Range_Brequet = (self.n_p / (self.c_p * self.g)) * self.L_D * np.log(self.estimated_MTOM / (self.estimated_MTOM - self.W_f_used))
-        self.results["Estimated Range [km]"] = round(self.Range_Brequet, 3)
-    
     def __str__(self):
-        output = ["Class I Weight Estimation Results:\n"]
-        max_key_length = max(len(key) for key in self.results.keys())
+        output = ["\n"]
+        output.append("Class I Weight Estimation Results:")
+        
+        # Prepare list of key-value pairs to print
+        results_data = {
+            "Maximum Take-off Mass [kg]": getattr(self, "estimated_MTOM", None),
+            "Maximum Take-off Weight [N]": getattr(self, "estimated_MTOW", None),
+            "Operating Empty Mass [kg]": getattr(self, "estimated_OEM", None),
+            "Operating Empty Weight [N]": getattr(self, "estimated_OEW", None),
+            "Fuel Mass [kg]": getattr(self, "estimated_fuel_mass", None),
+            "Fuel Weight [N]": getattr(self, "estimated_fuel_weight", None),
+            "Battery Mass [kg]": self.battery_mass_kg,
+            "Used Fuel Estimate [kg]": getattr(self, "W_f_used", None),
+            "Maximum Landing Weight [kg]": self.results.get("Maximum Landing Weight [kg]", None)
+        }
+
+        max_key_length = max(len(k) for k in results_data)
         header = f"{'Parameter'.ljust(max_key_length)} | Value"
         output.append(header)
         output.append("-" * len(header))
-        
-        for key, value in self.results.items():
-            output.append(f"{key.ljust(max_key_length)} | {value:>13,.3f}")
-        
+
+        for key, value in results_data.items():
+            if value is not None:
+                output.append(f"{key.ljust(max_key_length)} | {value:>13,.3f}")
+            else:
+                output.append(f"{key.ljust(max_key_length)} | {'Not computed':>13}")
+
         return "\n".join(output)
-    
-    
+
 
 
 if __name__ == "__main__":

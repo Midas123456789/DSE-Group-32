@@ -1,11 +1,10 @@
-from Aircraft.ISA_Calculator import *
 import numpy as np
 import matplotlib.pyplot as plt
 
 class WP_WS_Diagram:
     
     def __init__(self, V_cruise=0, V_stall=0, climb_rate=0, climb_gradient=0, e=0, CD0=0, h=0,
-            CL_MAX_clean=None, CL_MAX_land=0, CL_MAX_TO=None, A_design=0, TOP=0, landing_distance=0, f=1, n_p=1, prop_setting=1):
+            CL_MAX_clean=None, CL_MAX_land=0, CL_MAX_TO=None, A_design=0, TOP=0, landing_distance=0, f=1, n_p=1, prop_setting=1, rho=1.225):
         # Ensure clean and TO CLs are lists
         self.x_max = 1500
         self.y_max = 0.4
@@ -33,7 +32,9 @@ class WP_WS_Diagram:
         self.h = h if isinstance(h, list) else [h]
         self.rho = []
         self.rho0 = 1.225
-        self.set_densities()
+        self.rho = rho if isinstance(rho, list) else [rho]
+        #self.set_densities()
+        self.plot_wing_loading_constraints()
     
     def set_densities(self):
         for h in self.h:
@@ -197,7 +198,6 @@ class WP_WS_Diagram:
         plt.tight_layout(rect=[0, 0, 1, 0.95])
         plt.show()
 
-    # TO BE REPLACED
     def drag_polar(self, A=0):
         return (self.CD0 + (self.CL_max_clean[len(self.CL_max_clean) - 1] ** 2) / (np.pi * A * self.e))  # Drag Coefficient
 
@@ -206,16 +206,16 @@ if __name__ == "__main__":
     aircraft = WP_WS_Diagram(
         
         # Aerodynamics
-        e              = 0.70,             # Oswald efficiency factor
-        CD0            = 0.0335,            # Parasite drag
-        h              = [0,15000],  # Altitude
+        e              = 0.85,             # Oswald efficiency factor
+        CD0            = 0.020,            # Parasite drag
+        h              = 15000,  # Altitude
         
         # Weight estimation
         f              = 1,     # Weight fraction (fuel)
         
         # Velocity
-        V_stall        = 40,    # Pre-given stall speed
-        V_cruise       = 50,    # Pre-given cruise speed
+        V_stall        = 30,    # Pre-given stall speed
+        V_cruise       = 36.64,    # Pre-given cruise speed
         climb_rate     = 5,
         climb_gradient = 0.01,
         
@@ -224,14 +224,13 @@ if __name__ == "__main__":
         landing_distance = 700, # Landing distance
         
         # Test variables
-        CL_MAX_clean   = [1.5], # Possible clean CL
-        CL_MAX_TO      = [1.6], # Possible take-off CL
-        CL_MAX_land    = [1.9], # Possible landing CL 
-        A_design       = [15, 20, 25], # Different output settings of the propellor
+        CL_MAX_clean   = [1.2], # Possible clean CL
+        CL_MAX_TO      = [2.0], # Possible take-off CL
+        CL_MAX_land    = [2.2], # Possible landing CL 
+        A_design       = [25], # Different output settings of the propellor
         
         # Propulsion
-        n_p            = 0.95,  # Propellor efficiency
+        n_p            = 0.85,  # Propellor efficiency
         prop_setting   = 1,
     )
-    
-    aircraft.plot_wing_loading_constraints()
+

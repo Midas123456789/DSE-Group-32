@@ -3,7 +3,7 @@ import numpy as np
 from Aerodynamics.Aerodynamics import Aerodynamic
 
 class AircraftAerodynamic(Aerodynamic):
-    def __init__(self, W=0, h=0, V=0, S=0, A=0, e=0, CD0=0, CL=0):
+    def __init__(self, W=0, h=0, V=0, S=0, A=0, e=0, CD0=0, CL=0, n_p=1):
         super().__init__(weight=W, altitude=h)
         self.V = V
         self.S = S
@@ -11,6 +11,7 @@ class AircraftAerodynamic(Aerodynamic):
         self.e = e 
         self.CD0 = CD0
         self.CL = CL
+        self.n_p = n_p
 
     @property
     def rho(self):
@@ -55,3 +56,45 @@ class AircraftAerodynamic(Aerodynamic):
         rho = rho if rho is not None else self.rho
         weight = weight if weight is not None else self.weight
         return np.sqrt((2 * weight) / (rho * S * CL))
+    
+    def compute_drag_and_power(self, V):
+        """Returns total drag and power required at velocity V."""
+        q = 0.5 * self.rho * V**2
+        parasite_drag = q * self.S * self.CD0
+        induced_drag = (self.weight**2) / (q * self.S * np.pi * self.A * self.e) if q > 0 else 0
+        total_drag = parasite_drag + induced_drag
+        power_required = total_drag * V / self.n_p  # in Watts
+        return total_drag, power_required
+
+    def __str__(self):
+        output = ["\n"]
+        output.append("Aircraft Aerodynamic Properties:")
+        data = {
+            "Altitude [m]": self.altitude,
+            "Speed [m/s]": self.V,
+            "Wing Area [m²]": self.S,
+            "Aspect Ratio [-]": self.A,
+            "Oswald Efficiency [-]": self.e,
+            "CD0 [-]": self.CD0,
+            "CL [-]": self.CL,
+            "Mach Number [-]": self.M,
+            "Air Density [kg/m³]": self.rho,
+            "Speed of Sound [m/s]": self.a,
+            "Drag Coefficient (CD)": self.CD,
+            "Lift [N]": self.Lift(),
+            "Drag [N]": self.Drag(),
+            "Power Required [W]": self.compute_drag_and_power(self.V)[1],
+        }
+
+        max_key_len = max(len(k) for k in data)
+        header = f"{'Parameter'.ljust(max_key_len)} | Value"
+        output.append(header)
+        output.append("-" * len(header))
+
+        for key, val in data.items():
+            try:
+                output.append(f"{key.ljust(max_key_len)} | {val:>13,.3f}")
+            except Exception:
+                output.append(f"{key.ljust(max_key_len)} | {'N/A':>13}")
+
+        return "\n".join(output)
