@@ -1,7 +1,7 @@
 # main.py
 
 from Requirements import Requirements
-from ISA_Calculator import ISA_Calculator
+from Atmosphere.ISA_Calculator import ISA_Calculator
 
 from Weight_Estimations.Class_I_Weight_Estimation import Class_I_Weight_Estimation
 from Weight_Estimations.Class_II_Weight_Estimation import ClassIIWeightEstimation
@@ -9,8 +9,8 @@ from Weight_Estimations.Class_II_Weight_Estimation import ClassIIWeightEstimatio
 from Aerodynamics.Aircraft_Aerodynamics import AircraftAerodynamic
 from Aerodynamics.Aero_plotting import plot_h_Preq, plot_A_LD, plot_feasible_S_V, plot_h_V, plot_h_W, plot_P_V
 
-from Others.WP_WS_diagram import WP_WS_Diagram
-from Others.Performance import Performance
+from Weight_Estimations.WP_WS_diagram import WP_WS_Diagram
+from Performance.Performance import Performance
 
 
 class AircraftInputs:
