@@ -2,11 +2,11 @@ import aerosandbox as asb
 import aerosandbox.numpy as np
 from mass_wing import Mass_wing
 
-def get_LH_conventional(N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altitude = 18000, mission_days = 10, W_payload = 5e3, P_payload = 10e3):
+def get_LH_flying_wing(N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altitude = 18000, mission_days = 10, W_payload = 5e3, P_payload = 10e3):
     g = 9.81
     atm = asb.Atmosphere(altitude=altitude)
     opti = asb.Opti()
-    Tail_drag_factor = 1.1
+    Tail_drag_factor = 1.02
     second_in_day = 86400
     mission_days = 10
     mission_seconds = mission_days * second_in_day
@@ -100,35 +100,39 @@ def get_LH_conventional(N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altit
     # === Objective === #
     opti.minimize(P_required)
     # === Solve === #
-    sol = opti.solve(verbose=False)
-    return {
-    "cords": sol.value(cords),
-    "b": sol.value(b),
-    "V": sol.value(V),
-    "alpha": sol.value(alpha),
-    "wing_area": sol.value(wing.area()),
-    "CL": sol.value(CL),
-    "CD": sol.value(CD),
-    "L": sol.value(L),
-    "D": sol.value(D),
-    "P_required": sol.value(P_required),
-    "W_spar": sol.value(W_spar),
-    "t_list": sol.value(t_list),
-    "W_total": sol.value(W_total),
-    "W_misc": sol.value(W_misc),
-    "W_skin": sol.value(W_skin),
-    "M_LH": sol.value(M_LH),
-    "M_fuel_cell": sol.value(M_fuel_cell),
-    "M_tank": sol.value(M_tank),
-    "LH_volume": sol.value(LH_volume),
-    "Airfoil": wing_airfoil,  # Only keep this if wing_airfoil is not symbolic
-    "Altitude": altitude,      # Assumed numeric input
-    "Atm": atm                 # Only if atm is not symbolic
-    }
+    try:
+        sol = opti.solve(verbose=False)
+        return {
+        "cords": sol.value(cords),
+        "b": sol.value(b),
+        "V": sol.value(V),
+        "alpha": sol.value(alpha),
+        "wing_area": sol.value(wing.area()),
+        "CL": sol.value(CL),
+        "CD": sol.value(CD),
+        "L": sol.value(L),
+        "D": sol.value(D),
+        "P_required": sol.value(P_required),
+        "W_spar": sol.value(W_spar),
+        "t_list": sol.value(t_list),
+        "W_total": sol.value(W_total),
+        "W_misc": sol.value(W_misc),
+        "W_skin": sol.value(W_skin),
+        "M_LH": sol.value(M_LH),
+        "M_fuel_cell": sol.value(M_fuel_cell),
+        "M_tank": sol.value(M_tank),
+        "LH_volume": sol.value(LH_volume),
+        "Airfoil": wing_airfoil,  # Only keep this if wing_airfoil is not symbolic
+        "Altitude": altitude,      # Assumed numeric input
+        "Atm": atm                 # Only if atm is not symbolic
+        }
+    except Exception as e:
+        print(f"No solution found. Error: {e}")
+        return
 
 if __name__ == "__main__":
     # === Unpack Results from Dictionary ===
-    results = get_LH_conventional()
+    results = get_LH_flying_wing()
 
     cords_sol = results["cords"]
     b_sol = results["b"]
@@ -153,7 +157,7 @@ if __name__ == "__main__":
     atm = results["Atm"]
     wing_airfoil = results["Airfoil"]
 
-
+    
     W_LH = M_LH_sol * 9.81
     Total_weight_sol = W_total_sol
 

@@ -2,11 +2,11 @@ import aerosandbox as asb
 import aerosandbox.numpy as np
 from mass_wing import Mass_wing
 
-def get_LH_tandem(N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altitude = 18000, mission_days = 10, W_payload = 1000, P_payload = 10e3):
+def get_LH_tandem(N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altitude = 18000, mission_days = 10, W_payload = 5e3, P_payload = 10e3):
     g = 9.81
     atm = asb.Atmosphere(altitude=altitude)
     opti = asb.Opti()
-    Tail_drag_factor = 1.03
+    Tail_drag_factor = 1.05
     second_in_day = 86400
     mission_seconds = mission_days * second_in_day
 
@@ -159,9 +159,7 @@ if __name__ == "__main__":
     atm = results["Atm"]
     wing_airfoil = results["Airfoil"]
 
-    # Add manually-defined parameters
-    W_payload = 50  # example: payload weight in N
-    P_payload = 30  # example: payload power in W
+
     W_LH = M_LH_sol * 9.81
     Total_weight_sol = W_total_sol
 
@@ -218,11 +216,11 @@ if __name__ == "__main__":
     print(f"  L/D ratio:                {L_sol / D_sol:.2f} \n")
 
     print("=== Energy & Power ===")
-    print(f"  Payload power:            {P_payload:.2f} W")
+    #print(f"  Payload power:            {P_payload:.2f} W")
     print(f"  Power required (P):       {P_required_sol:.2f} W\n")
 
     print("=== Weights ===")
-    print(f"  Payload weight:           {W_payload:.2f} N")
+    #print(f"  Payload weight:           {W_payload:.2f} N")
     print(f"  Spar weight:              {W_spar_sol:.2f} N")
     print(f"  Skin weight:              {W_skin_sol:.2f} N")
     print(f"  LH weight:                {W_LH:.2f} N")
@@ -230,7 +228,7 @@ if __name__ == "__main__":
     print(f"  Total weight:             {Total_weight_sol:.2f} N\n")
 
     print("=== Mass ===")
-    print(f"  Payload mass:             {W_payload / 9.81:.2f} kg")
+    #print(f"  Payload mass:             {W_payload / 9.81:.2f} kg")
     print(f"  Spar mass:                {W_spar_sol / 9.81:.2f} kg")
     print(f"  Skin mass:                {W_skin_sol / 9.81:.2f} kg")
     print(f"  Miscellaneous mass:       {W_misc_sol / 9.81:.2f} kg")
