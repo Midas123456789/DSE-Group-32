@@ -130,7 +130,10 @@ def get_LH_conventional(N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altit
     "LH_volume": LH_volume,
     "Airfoil": wing_airfoil,
     "Altitude": altitude,
-    "Atm": atm
+    "Atm": atm,
+    "W_payload": W_payload,
+    "P_payload": P_payload,
+    
     } 
 
 # === Unpack Results from Dictionary ===
@@ -158,10 +161,8 @@ LH_volume_sol = sol.value(results["LH_volume"])
 altitude = sol.value(results["Altitude"])
 atm = sol.value(results["Atm"])
 wing_airfoil = sol.value(results["Airfoil"])
-
-# Add manually-defined parameters
-W_payload = 50  # example: payload weight in N
-P_payload = 30  # example: payload power in W
+W_payload = sol.value(results["W_payload"])
+P_payload = sol.value(results["P_payload"])
 W_LH = M_LH_sol * 9.81
 Total_weight_sol = W_total_sol
 
