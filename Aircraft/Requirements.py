@@ -4,5 +4,6 @@ class Requirements:
         
         # Set requirements
         self.payload_weight_kg = 100    # kg
-        self.endurance         = 0.5    # days (right now this is the time of one charge)
+        self.endurance         = 7      # days (right now this is the time of one charge)
         self.power_available   = 20000  # kW
+        
