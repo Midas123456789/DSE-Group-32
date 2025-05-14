@@ -80,7 +80,7 @@ class Class_I_Weight_Estimation():
             
             self.results["Maximum Take-off Weight [kg]"] = round(self.estimated_MTOM, 3)
             self.results["Estimated Weight [N]"] = round(self.estimated_MTOM * self.g, 3)
-            self.results["Operation Empty Weight [kg]"] = round(self.estimated_OEM, 3)
+            self.results["Operating Empty Weight [kg]"] = round(self.estimated_OEM, 3)
             self.results["Fuel Weight [kg]"] = round(self.estimated_fuel_mass, 3)
             self.results["Battery Mass [kg]"] = round(self.battery_mass_kg, 3)
         else:
