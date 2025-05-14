@@ -1,5 +1,5 @@
 import numpy as np
-from ISA_Calculator import ISA_Calculator
+from Atmosphere.ISA_Calculator import ISA_Calculator
 
 class Aerodynamic:
     def __init__(self, weight, altitude):
