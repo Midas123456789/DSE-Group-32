@@ -10,26 +10,19 @@ altitude = 18000
 atm = asb.Atmosphere(altitude=altitude)
 opti = asb.Opti()
 
-
+# === Solar & Power Parameters === #
+solar_irradiance = 120         # W/m^2 available at altitude
+solar_efficiency = 0.30        # 20% cell efficiency
+motor_eff = 0.97 #Fundamentals of Aircraft and Airship Design
+prop_eff = 0.85 #Fundamentals of Aircraft and Airship Design
+η_prop = motor_eff * prop_eff  # Total propulsive efficiency
 Tail_drag_factor = 1.1
 
-second_in_day = 86400
-mission_days = 7
-mission_seconds = mission_days * second_in_day
 
-W_payload = 1000  # N
-P_payload = 10000  # Watts, constant power for onboard systems
+W_payload = 500  # N
+P_payload = 2e3 # Watts, constant power for onboard systems
 
-density_LH = 70.85 #kg/m3
-energy_density_LH = 142 * 10 ** 6 #J/kg
-fuel_tank_wall_thickness = 0.0612  # from Brewer, Hydrogen Aircraft Technology pg. 203
-power_density_PEMFCs = 40000 #W/kg
-PEMFCs_eff = 0.55
-motor_eff = 0.97 #Fundamentals of Aircraft and Airship Design
-propeller_eff = 0.85 #Fundamentals of Aircraft and Airship Design
-conversion_eff = PEMFCs_eff
-propulsive_eff = conversion_eff * motor_eff * propeller_eff
-fuel_tank_fuel_mass_fraction = 1 / (1 + 0.356)  # from Brewer, Hydrogen Aircraft Technology pg. 203
+Energy_density_bat = 1.8e6  # J/kg # based on Elysian
 
 # === Design Variables === #
 cords = opti.variable(init_guess=3 * np.ones(N_cords), n_vars=N_cords)
@@ -113,13 +106,19 @@ D = 0.5 * atm.density() * V**2 * aero['CD'] * wing.area() * Tail_drag_factor
 # === Payload Power === #
 
 # === Power Constraint and Battery Sizing === #
+day_frac = 0.5
+second_in_day = 86400
 P_required = V * D
-E_LH = 1 / conversion_eff * (P_required / propulsive_eff + P_payload) * mission_seconds
-M_LH = E_LH / energy_density_LH
-W_LH = M_LH * g
-M_tank = fuel_tank_fuel_mass_fraction * M_LH
-W_tank = M_tank * g
-LH_volume = M_LH / density_LH
+E_generated = wing.area() * solar_irradiance * solar_efficiency * day_frac * second_in_day
+E_payload = P_payload * second_in_day
+E_prop = P_required * second_in_day / η_prop
+E_bat = (E_prop + E_payload) * (1-day_frac)
+M_bat = E_bat / Energy_density_bat
+W_battery = M_bat * g
+
+opti.subject_to(
+    E_generated > E_payload + E_prop
+)
 
 # === Skin Weight === #
 skin_density = 0.25  # kg/m², adjust based on material
@@ -129,13 +128,12 @@ W_skin = 2 * wing.area() * skin_density * g
 spar_mass, t_list = wing.spar_mass(L, b)
 W_spar = spar_mass * g   
 W_wing = W_spar + W_skin
-M_fuel_cell = E_LH / mission_seconds / power_density_PEMFCs
-W_fuel_cell = M_fuel_cell * g
+
 # === Miss Weight === #
 W_misc = W_wing
 
 # === Total Weight === #
-W_total = W_payload + W_wing + W_LH + W_misc + W_tank + W_fuel_cell
+W_total = W_payload + W_wing + W_battery + W_misc
 opti.subject_to(L >= W_total)
 
 # === Objective === #
@@ -158,6 +156,7 @@ P_required_sol = sol.value(P_required)
 #P_available_sol = sol.value(P_available)
 W_spar_sol = sol.value(W_spar)
 t_list_sol = sol(t_list)
+battery_mass_sol = sol(M_bat)
 Total_weight_sol = sol(W_total)
 W_misc = sol(W_misc)
 
@@ -184,8 +183,7 @@ print("="*35 + "\n")
 print("=== Geometry ===")
 print(f"  Span (b):                 {b_sol:.2f} m")
 print(f"  Chord distribution (m):   {cords_sol}")
-print(f"  Wing area:                {area_sol:.2f} m²")
-print(f"  Volume LH:                {sol.value(LH_volume):.2f} m3\n")
+print(f"  Wing area:                {area_sol:.2f} m²\n")
 
 print("=== Flight Conditions ===")
 print(f"  Flight velocity (V):      {V_sol:.2f} m/s")
@@ -204,12 +202,15 @@ print("=== Energy & Power ===")
 print(f"  Payload power:            {P_payload:.2f} W")
 print(f"  Power required (P):       {P_required_sol:.2f} W")
 
+print(f"  Solar efficiency:         {solar_efficiency*100:.1f}%")
+print(f"  Propulsion efficiency:    {η_prop*100:.1f}%")
+print(f"  Daylight duration:        {day_frac*24:.1f} hours\n")
 
 print("=== Weights ===")
 print(f"  Payload weight:           {W_payload:.2f} N")
 print(f"  Spar weight:              {W_spar_sol:.2f} N")
 print(f"  Skin weight:              {sol.value(W_skin):.2f} N")
-print(f"  LH weight:           {sol.value(W_LH):.2f} N")
+print(f"  Battery weight:           {sol.value(W_battery):.2f} N")
 print(f"  Miscellaneous weight:     {W_misc:.2f} N")  # New line for miscellaneous weight
 print(f"  Total weight:             {Total_weight_sol:.2f} N\n")
 
@@ -217,19 +218,18 @@ print("=== Mass ===")
 print(f"  Payload mass:           {W_payload / 9.81:.2f} kg")
 print(f"  Spar mass:              {W_spar_sol / 9.81:.2f} kg")
 print(f"  Skin mass:              {sol.value(W_skin) / 9.81:.2f} kg")
+print(f"  Battery mass:             {battery_mass_sol:.2f} kg")
 print(f"  Miscellaneous mass:     {W_misc / 9.81:.2f} kg")  # New line for miscellaneous weight
-print(f"  LH mass:           {sol.value(M_LH):.2f} kg")
-print(f"  Fuel cell mass:           {sol.value(M_fuel_cell):.2f} kg")
-print(f"  Tank mass:           {sol.value(M_tank):.2f} kg")
 print(f"  Total mass:             {Total_weight_sol / 9.81:.2f} kg\n")
 
 print('=== Operations ===')
-print(f"  Yearly LH consumption:           {sol.value(M_LH)*52:.2f} kg")
-eu_per_kg_LH = 10
-print(f"  Yearly Fuel Cost:           {sol.value(M_LH)*52 * eu_per_kg_LH:.2f} Euro\n")
+battery_lifetime = 300 #days
+battery_price = 3.11*10**-5 #eu/J
+print(f"  Yearly battery consumption:           {sol.value(M_bat)*365/300:.2f} kg")
+print(f"  Yearly battery price:           {sol.value(E_bat)*365/300*battery_price:.2f} Euro\n")
 
 print("=== Structural ===")
 print(f"  Spar thicknesses (t_list):\n    {t_list_sol}")
 
 print("\n" + "="*35)
-airplane_sol.draw(show=True)
+#airplane_sol.draw(show=True)

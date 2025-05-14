@@ -7,7 +7,7 @@ class Power:
     based on location, date, and system parameters.
     """
 
-    def __init__(self, latitude: float, day_of_year: int, area: float, power_required=None, max_irradiance: float = 1000, efficiency: float = 0.2):
+    def __init__(self, latitude: float, day_of_year: int, area: float, power_required=None, max_irradiance: float = 1376 , efficiency: float = 1):
         """
         Initialize the Power model.
 
@@ -86,6 +86,14 @@ class Power:
             ndarray: Power generated (in W) at each second.
         """
         return self.irradiance * self.efficiency
+    
+    def energy_generated(self):
+        
+        return np.cumsum(self.power_generated())
+    
+    def average_power_12h(self):
+        
+        return 2 * self.energy_generated()[-1] / self.seconds_in_day
 
     def net_power(self):
         """
@@ -164,9 +172,10 @@ if __name__ == "__main__":
     amplitude = 200  # Max power required in watts
     power_required = amplitude * (1 + np.sin(2 * np.pi * time / seconds_in_day))  # Sine wave with period of 24 hours
 
-    power = Power(latitude=0, day_of_year=1, area=10, power_required=power_required)
+    power = Power(latitude=70, day_of_year=365//2, area=10, power_required=power_required)
+    print('Average power = ', power.average_power_12h())
 
     print('Deficit: ', power.max_deficit())
     print('Surplus: ', power.max_surplus())
 
-    power.plot_power_profiles()
+    #power.plot_power_profiles()
