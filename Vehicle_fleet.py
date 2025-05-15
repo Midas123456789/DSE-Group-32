@@ -92,9 +92,9 @@ def to_wgs84(*gdfs):
 def plot_all(grid, circles, centers):
     fig, ax = plt.subplots(figsize=(12, 12))
     grid.plot(ax=ax, edgecolor='black', facecolor='none')
-    circles.plot(ax=ax, edgecolor='blue', facecolor='none', alpha=0.3, label="150 km Circles")
+    circles.plot(ax=ax, edgecolor='blue', facecolor='none', alpha=0.3, label="250 km Circles")
     centers.plot(ax=ax, color='red', markersize=5, label="Circle Centers")
-    plt.title("150 km Circles Covering Mainland EU Grid (Redundant Removed)")
+    plt.title("250 km Circles Covering Mainland EU Grid (Redundant Removed)")
     ax.set_xlabel("Longitude")
     ax.set_ylabel("Latitude")
     ax.set_aspect('equal')
@@ -102,7 +102,7 @@ def plot_all(grid, circles, centers):
     plt.show()
 
 
-def generate_coverage_data(shapefile_path, n_cells=200, radius_m=150_000):
+def generate_coverage_data(shapefile_path, n_cells=200, radius_m=250_000):
     mainland = load_mainland_eu(shapefile_path)
     grid = create_grid(mainland, n_cells=n_cells)
     circle_points = compute_circle_centers(grid.total_bounds, radius_m)
