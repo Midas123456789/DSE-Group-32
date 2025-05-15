@@ -27,8 +27,33 @@ class RFC:
          deficit_joules = self.total_deficit_joules()  # Total deficit in joules
          deficit_kWh = deficit_joules / 3.6e6  # Convert from Joules to kWh (1 kWh = 3600000 J)
          return deficit_kWh
+     
+     def total_surplus_joules(self):
+            """
+            Calculate the total energy surplus (in joules) over the entire day.
+            """
+            net_power = self.power_model.net_power()
+            # Sum the positive power values (surplus) over time in joules (W * seconds)
+            surplus_joules = np.sum(np.where(net_power > 0, net_power, 0))  # Positive power indicates surplus
+            return surplus_joules
+     
+     def energy_surplus_kWh(self):
+         surplus_joules = self.total_surplus_joules()
+         surplus_kWh = surplus_joules / 3.6e6  # Convert from Joules to kWh (1 kWh = 3600000 J)
+         return surplus_kWh
+     
+     def hydrogen_produced(self):
+            """
+            Calculate the amount of hydrogen produced in kg.
+            """
+            # Get the total energy surplus in kWh
+            energy_kWh = self.energy_surplus_kWh()
+            # Calculate the mass of hydrogen
+            mass_hydrogen_created = energy_kWh / 50 #50 comes from Chat, its the energy required to produce 1 kg of hydrogen 
+            return mass_hydrogen_created
 
         
+
      def rfc_mass_kg(self):
         deficit = self.energy_deficit_kWh()
         energy_kWh = deficit / self.efficiency  
@@ -41,16 +66,22 @@ class RFC:
         return energy_kWh / self.vol_energy_density
         
 
-     def hydrogen_used(self):
+     def hydrogen_required(self):
          """
          Calculate the amount of hydrogen used in kg.
          """
          # Get the total energy deficit in kWh
          energy_kWh = self.energy_deficit_kWh() / 0.6
          # Calculate the mass of hydrogen
-         mass_hydrogen = energy_kWh / self.energy_density_hydrogen 
-         return mass_hydrogen
+         mass_hydrogen_required = energy_kWh / self.energy_density_hydrogen 
+         return mass_hydrogen_required
      
+     def hydrogen_deficit(self):
+         hydrogen_deficit = self.hydrogen_required() - self.hydrogen_produced()
+         return hydrogen_deficit
+     
+
+     '''   
      def water_mass(self):
          mass_water = self.hydrogen_used() * 9
          return mass_water
@@ -65,7 +96,7 @@ class RFC:
          energy_required_electrolysis_W = energy_required_electrolysis_kWh / daylight_hours * 1000 # Convert kWh to W and divide by seconds in a day
 
          return energy_required_electrolysis_W
-     
+         
      def compute_solar_array_area(self, base_power=100000, efficiency=0.30, solar_constant=1300):
         elevation = self.power_model._solar_elevation()
         raw_irradiance = np.sin(elevation) * solar_constant
@@ -90,36 +121,38 @@ class RFC:
         specific_mass = 0.8
         area = self.power_model.area
         return area * specific_mass
-
+  '''
         
 
 if __name__ == "__main__":
     # Replace power_required with real data or a test profile
     time = np.arange(86400)
 
-    power_required = [100000 for i in range(86400)]
+    power_required = [75000 for i in range(86400)]
 
-    power_model = Power(latitude=60, day_of_year=1, power_required=power_required, area=30000)
+    power_model = Power(latitude=40, day_of_year=1, power_required=power_required, area=3000)
     rfc = RFC(power_model)
 
-    area = rfc.compute_solar_array_area()
+    #area = rfc.compute_solar_array_area()
     # Step 4: Rebuild the model with the correct profile
-    power_model = Power(latitude=40, day_of_year=1, power_required=power_required, area = area)
-    rfc = RFC(power_model)
+    #power_model = Power(latitude=40, day_of_year=1, power_required=power_required, area = area)
+    #rfc = RFC(power_model)
 
     print("RFC Mass (kg):", rfc.rfc_mass_kg())
     print("RFC Volume (m³):", rfc.rfc_volume_m3())
-    print(f"Required Electrolysis Power (W): {rfc.required_electrolysis_power()}")
-    print(f"Hydrogen used (kg): {rfc.hydrogen_used()}")
-    print(f"Water mass (kg): {rfc.water_mass()}")
-    print("areas", area)
+    #print(f"Required Electrolysis Power (W): {rfc.required_electrolysis_power()}")
+    #print(f"Hydrogen used (kg): {rfc.hydrogen_used()}")
+    #print(f"Water mass (kg): {rfc.water_mass()}")
+    #print("areas", area)
     power = power_model.power_generated()
     average_power_W = np.mean(power)
     print(f"Average Power Generated (W): {average_power_W}")
     print(power_model.max_deficit())
     print(rfc.energy_deficit_kWh())
-    print(rfc.solar_panel_mass())
-    print(rfc.power_model.area)
+    #print(rfc.solar_panel_mass())
+    #print(rfc.power_model.area)
+    print(rfc.hydrogen_deficit())
+    print(rfc.energy_surplus_kWh())
         
     
 
