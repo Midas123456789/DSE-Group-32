@@ -109,7 +109,7 @@ if __name__ == "__main__":
         
         # Choice
         h_cruise=15000,
-        propulsion_type='hydrogen',
+        propulsion_type='battery',
         
     )
     ac = Aircraft(inputs)
