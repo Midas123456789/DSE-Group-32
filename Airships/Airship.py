@@ -79,6 +79,11 @@ class Airship:
         self.mu_cr = 0.0209*isa.dynamic_viscosity(isa.results[self.altitude*0.3048]["Temperature [K]"])
         self.density_sigma = self.density/self.density_sl
 
+
+        #ASSUME that the power subsystems weight is linearly dependent on the Preq. 
+        self.rfc_a = 0.0413484048735544
+        self.rfc_b = -1545.1903958255425
+
         #endregion
 
 #region dependent properties
@@ -211,9 +216,14 @@ class Airship:
 
     def wg1(self):
         self.wg = self.buoyancy / self.BR
-        self.br_takeoff = self.buoyancy/self.wg
-        self.woe = self.wg - self.payload
-        return self.wg, self.br_takeoff
+        #self.br_takeoff = self.buoyancy/self.wg
+        self.woe = self.wg #- self.payload
+        assert self.wg > self.payload, 'Error: Weight of airship is lower than payload'
+        assert self.wg > 0, 'Error: Weight of airship is subzero'
+
+
+        
+        return self.wg#, self.br_takeoff
 
     # Exercise/Line 19
     def calculate_lift(self):
@@ -349,13 +359,18 @@ class Airship:
         self.power = PropPowerAirship(self.CD, self.K, self.CL, self.velocity, self.density, self.wetsurface, self.efficienty_eng)
         self.prop_power = self.power.prop_power()
         self.power_required = self.power.total_power()
+
+        #are for solar panels
+        area  = self.de*self.length*0.8
         
-        power_model = Power(latitude=60, day_of_year=1, power_required=self.power_required*1000, area=30000)
+        sqfeet_to_sqmeters = 0.092903
+        
+        power_model = Power(latitude=30, day_of_year=150, power_required=self.power_required*1000, area=area*sqfeet_to_sqmeters)
         rfc = RFC(power_model)
 
-        area = rfc.compute_solar_array_area()
+        compt_area = rfc.compute_solar_array_area()
         # Step 4: Rebuild the model with the correct profile
-        power_model = Power(latitude=40, day_of_year=1, power_required=self.power_required*1000, area = area)
+        power_model = Power(latitude=30, day_of_year=150, power_required=self.power_required*1000, area = compt_area)
         self.rfc = RFC(power_model)
         self.Wrfc = (rfc.rfc_mass_kg()+rfc.solar_panel_mass()) * 2.20462
         
@@ -413,6 +428,7 @@ class Airship:
         #landing gear
         self.woe2+=self.W_vms
         self.woe2+=self.Wrfc
+        #self.woe2+=1384*2.20462
         self.woe2+=self.W_Msys
 
         
@@ -420,7 +436,8 @@ class Airship:
         return
 
     def iterator(self,Volume):
-        if abs(Volume[0]) < abs(1e5):
+        vol_limit = 8e4
+        if abs(Volume[0]) < abs(vol_limit):
             #print (f'Volume is too small: {Volume} ft³')
             return -(1e8*abs(1e5 - Volume[0]) + 1e8)
 
