@@ -1,10 +1,35 @@
 import aerosandbox as asb
 import aerosandbox.numpy as np
-from mass_wing import Mass_wing
 import matplotlib.pyplot as plt
 
+
+def wing_weight(W_TO, n_ult, A, S, taper_ratio, t_c, V_H):
+    W_TO *= 2.20462262
+    S *= 10.76
+    term1 = (W_TO * n_ult / 1e5)**0.65
+    term2 = A**0.57  # Since cos(sweep) = 1 when sweep = 0
+    term3 = (S / 100)**0.61
+    term4 = (((1 + taper_ratio) / 2) / t_c)**0.36
+    term5 = (1 + V_H / 500)**0.5
+
+    W_w = 96.948 * (term1 * term2 * term3 * term4 * term5)**0.993
+    return W_w/ 2.20462262
+    
+
+def avionics_weight(W_TO): # Raymer – Aircraft Design: A Conceptual Approach
+    return W_TO * 0.03
+
+def landing_gear_weight(W_TO): # assumption
+    return W_TO * 0.05
+
+def motor_weight(P_r):
+    specific_power = 10e3 #w/kg
+    motor_weight = P_r / specific_power * 9.81
+    return motor_weight 
+
+
 class Tandem_LH:
-    def __init__(self, N_cords = 5, wing_airfoil = asb.Airfoil("sd7037"), altitude = 18e3, mission_days = 7, W_payload = 1e3, P_payload = 5e3, tail_drag_factor = 1.05):
+    def __init__(self, N_cords = 2, wing_airfoil = asb.Airfoil("sd7037"), altitude = 18e3, mission_days = 7, W_payload = 1200, P_payload = 7e3):
         #GEOMETRY
         self.N_cords = N_cords
         self.wing_airfoil = wing_airfoil
@@ -19,7 +44,7 @@ class Tandem_LH:
         self.mission_seconds = mission_days * self.second_in_day
         
         #AERODYNAMICS
-        self.tail_drag_factor = tail_drag_factor
+        #self.tail_drag_factor = tail_drag_factor
         self.atm = asb.Atmosphere(altitude=altitude)
         
         #POWER
@@ -29,7 +54,7 @@ class Tandem_LH:
         self.g = 9.81
         self.density_LH = 70.85 #kg/m3
         self.energy_density_LH = 142 * 10 ** 6 #J/kg
-        self.power_density_PEMFCs = 40000 #W/kg
+        self.power_density_PEMFCs = 1e3 #W/kg HyPoint 
         self.PEMFCs_eff = 0.55
         self.motor_eff = 0.97 #Fundamentals of Aircraft and Airship Design
         self.propeller_eff = 0.85 #Fundamentals of Aircraft and Airship Design
@@ -57,7 +82,7 @@ class Tandem_LH:
         Initialise parameterised mass wing. 
         """
         self.y_sections = np.linspace(0, self.b / 2, self.N_cords)
-        self.wing1 = Mass_wing(
+        self.wing1 = asb.Wing(
             symmetric=True,
             xsecs=[
                 asb.WingXSec(
@@ -69,7 +94,7 @@ class Tandem_LH:
             ]
         )
         
-        self.wing2 = Mass_wing(
+        self.wing2 = asb.Wing(
             symmetric=True,
             xsecs=[
                 asb.WingXSec(
@@ -80,20 +105,91 @@ class Tandem_LH:
                 for i in range(self.N_cords)
             ]
         ).translate([9,0,0])
-        self.airplane = asb.Airplane(wings=[self.wing1] + [self.wing2])
+        
+        V_stab = [asb.Wing(
+            name="V-stab",
+            xsecs=[
+                asb.WingXSec(
+                    xyz_le=[0, 0, 0],
+                    chord=3,
+                    airfoil=asb.Airfoil("ht08")
+                ),
+                asb.WingXSec(
+                    xyz_le=[2, 0, 2],
+                    chord=1,
+                    airfoil=asb.Airfoil("ht08")
+                )
+            ]
+        ).translate([6, 4, 0]),
+
+        asb.Wing(
+            name="V-stab",
+            xsecs=[
+                asb.WingXSec(
+                    xyz_le=[0, 0, 0],
+                    chord=3,
+                    airfoil=asb.Airfoil("ht08")
+                ),
+                asb.WingXSec(
+                    xyz_le=[2, 0, 2],
+                    chord=1,
+                    airfoil=asb.Airfoil("ht08")
+                )
+            ]
+        ).translate([6, -4, 0])
+        ]
+        
+        fuselages=[
+            asb.Fuselage(
+                name="Fuselage",
+                xsecs=[
+                    asb.FuselageXSec(
+                        xyz_c=[xi * 11, 0, 0],
+                        radius=5*asb.Airfoil("naca0020").local_thickness(x_over_c=xi)
+                    )
+                    for xi in np.cosspace(0, 1, 30)
+                ]
+            ).translate([-1,4,0]),
+            
+            asb.Fuselage(
+                name="Fuselage",
+                xsecs=[
+                    asb.FuselageXSec(
+                        xyz_c=[xi * 11, 0, 0],
+                        radius=5*asb.Airfoil("naca0020").local_thickness(x_over_c=xi)
+                    )
+                    for xi in np.cosspace(0, 1, 30)
+                ]
+            ).translate([-1,-4,0]),
+            
+            asb.Fuselage(
+                name="Fuselage",
+                xsecs=[
+                    asb.FuselageXSec(
+                        xyz_c=[xi * 5, 0, 0],
+                        radius=3*asb.Airfoil("naca0010").local_thickness(x_over_c=xi)
+                    )
+                    for xi in np.cosspace(0, 1, 30)
+                ]
+            ).translate([-1.5,0,-0.5])
+        ]
+        
+        self.airplane = asb.Airplane(wings=[self.wing1] + [self.wing2] + V_stab, fuselages=fuselages)
         self.wing_area = self.wing1.area() + self.wing2.area()
         
     def _setup_aero(self):
         self.aero = asb.AeroBuildup(airplane=self.airplane, op_point=self.op).run()
         self.L = 0.5 * self.atm.density() * self.V**2 * self.aero['CL'] * self.wing_area
-        self.D = 0.5 * self.atm.density() * self.V**2 * self.aero['CD'] * self.wing_area * self.tail_drag_factor
+        self.D = 0.5 * self.atm.density() * self.V**2 * self.aero['CD'] * self.wing_area #* self.tail_drag_factor
 
     def _setup_constraints(self):
         self.opti.subject_to([
         self.cords > 0,
         np.diff(self.cords) <= 0,
         self.wing_area < 2000,
-        self.L >= self.W_total
+        self.L >= self.W_total,
+        self.b > 15,
+        self.V > 5
         ])
         
     def _get_spar(self):
@@ -125,20 +221,21 @@ class Tandem_LH:
         self.LH_volume = self.M_LH / self.density_LH
 
         # Skin weight
-        skin_density = 0.25  # kg/m², adjust based on material
-        self.W_skin = 2 * self.wing_area * skin_density * self.g
+        #skin_density = 0.25  # kg/m², adjust based on material
+        #self.W_skin = 2 * self.area * skin_density * self.g
 
-        # Spar weight
-        self._get_spar()
+   
 
         # Wing weight
-        self.W_wing = self.W_spar + self.W_skin
+        self.W_wing = 2 * wing_weight(W_TO=self.L/2, n_ult=3, A=self.wing1.aspect_ratio(), S=self.wing_area, taper_ratio=self.wing1.taper_ratio(), t_c=0.15, V_H = self.V)
 
         # Miscellaneous weight
         self.W_misc = self.W_wing
-
+        self.W_avionics = avionics_weight(self.L)
+        self.W_gear = landing_gear_weight(self.L)
+        self.W_motor = motor_weight(self.P_required)
         # Total weight
-        self.W_total = self.W_payload + self.W_wing + self.W_LH + self.W_misc + self.W_tank + self.W_fuel_cell
+        self.W_total = self.W_payload + self.W_wing + self.W_LH + self.W_misc + self.W_tank + self.W_fuel_cell + self.W_avionics + self.W_gear + self.W_motor
 
 
     def solve(self):
@@ -153,60 +250,78 @@ class Tandem_LH:
         self.opti.minimize(self.P_required)
 
         # Solve the optimization problem
-        sol = self.opti.solve(verbose=False)
+        # Solve the optimization problem
+        try:
+            sol = self.opti.solve()
+        except RuntimeError as e:
+            print("Solver failed:", e)
+            print("Try inspecting problematic variables:")
+            print("cords:", self.opti.debug.value(self.cords))
+            print("b:", self.opti.debug.value(self.b))
+            print("V:", self.opti.debug.value(self.V))
+            raise
+
 
         # Store the solution
         self.solution = {
-            #GEOMETRY
-            "cords": sol.value(self.cords),
-            "b": sol.value(self.b),
-            "wing_area": sol.value(self.wing_area),
-            "t_list": sol.value(self.t_list),
-            "Airfoil": self.wing_airfoil,
-            "LH_volume": sol.value(self.LH_volume),
-            #FLIGHT
-            "V": sol.value(self.V),
-            "alpha": sol.value(self.alpha),
-            "CL": sol.value(self.aero['CL']),
-            "CD": sol.value(self.aero['CD']) * self.tail_drag_factor,
-            "L": sol.value(self.L),
-            "D": sol.value(self.D),
-            "P_required": sol.value(self.P_required),      
-            "Altitude": self.altitude,
-            "Atm": self.atm,
-            #WEIGHT (self.W_payload + self.W_wing + self.W_LH + self.W_misc + self.W_tank + self.W_fuel_cell)
-            "W_payload": sol.value(self.W_payload),
-            "W_wing": sol.value(self.W_wing),
-            "W_LH": sol.value(self.W_LH),
-            "W_misc": sol.value(self.W_misc),
-            "W_tank": sol.value(self.W_tank),
-            "W_spar": sol.value(self.W_spar),
-            "W_fuel_cell": sol.value(self.W_fuel_cell),
-            "W_skin": sol.value(self.W_skin),
-            "W_total": sol.value(self.W_total),
-            #MASS
-            "M_payload": sol.value(self.W_payload) / self.g,
-            "M_wing": sol.value(self.W_wing) / self.g,
-            "M_LH": sol.value(self.W_LH) / self.g,
-            "M_misc": sol.value(self.W_misc) / self.g,
-            "M_tank": sol.value(self.W_tank) / self.g,
-            "M_spar": sol.value(self.W_spar) / self.g,
-            "M_fuel_cell": sol.value(self.W_fuel_cell) / self.g,
-            "M_skin": sol.value(self.W_skin) / self.g,
-            "M_total": sol.value(self.W_total) / self.g
-        }
+        # GEOMETRY
+        "cords": sol.value(self.cords),
+        "b": sol.value(self.b),
+        "wing_area": sol.value(self.wing_area),
+        #"t_list": sol.value(self.t_list),
+        "Airfoil": self.wing_airfoil,
+        "LH_volume": sol.value(self.LH_volume),
+
+        # FLIGHT
+        "V": sol.value(self.V),
+        "alpha": sol.value(self.alpha),
+        "CL": sol.value(self.aero['CL']),
+        "CD": sol.value(self.aero['CD']), #* self.tail_drag_factor,
+        "L": sol.value(self.L),
+        "D": sol.value(self.D),
+        "L/D": sol.value(self.L)/sol.value(self.D),
+        "P_required": sol.value(self.P_required),
+        "Altitude": self.altitude,
+        "Atm": self.atm,
+
+        # WEIGHTS (N)
+        "W_payload": sol.value(self.W_payload),
+        "W_wing": sol.value(self.W_wing),
+        "W_LH": sol.value(self.W_LH),
+        "W_misc": sol.value(self.W_misc),
+        "W_tank": sol.value(self.W_tank),
+        "W_fuel_cell": sol.value(self.W_fuel_cell),
+        #"W_empenage": sol.value(self.empenage_weight),
+        "W_avionics": sol.value(self.W_avionics),
+        "W_gear": sol.value(self.W_gear),
+        "W_motor": sol.value(self.W_motor),
+        "W_total": sol.value(self.W_total),
+
+        # MASSES (kg)
+        "M_payload": sol.value(self.W_payload) / self.g,
+        "M_wing": sol.value(self.W_wing) / self.g,
+        "M_LH": sol.value(self.W_LH) / self.g,
+        "M_misc": sol.value(self.W_misc) / self.g,
+        "M_tank": sol.value(self.W_tank) / self.g,
+        "M_fuel_cell": sol.value(self.W_fuel_cell) / self.g,
+        #"M_empenage": sol.value(self.empenage_weight) / self.g,
+        "M_avionics": sol.value(self.W_avionics) / self.g,
+        "M_gear": sol.value(self.W_gear) / self.g,
+        "M_motor": sol.value(self.W_motor) / self.g,
+        "M_total": sol.value(self.W_total) / self.g,
+    }
+
         self._get_solution_plane()
         return self.solution
     
     def print_solution(self):
         sol = self.solution
-        print("\n--- HYDROGEN TANDEM OPTIMIZATION RESULTS ---\n")
+        print("\n--- HYDROGEN CONVENTIONAL OPTIMIZATION RESULTS ---\n")
 
         print("GEOMETRY:")
         print(f"  Wing span (b):                 {sol['b']:.2f} m")
         print(f"  Wing area:                     {sol['wing_area']:.2f} m²")
         print(f"  Chord distribution (m):        {np.round(sol['cords'], 2)}")
-        print(f"  Spar thicknesses (m):          {np.round(sol['t_list'], 4)}")
         print(f"  LH2 volume:                    {sol['LH_volume']:.2f} m³")
         print(f"  Airfoil:                       {sol['Airfoil'].name}\n")
 
@@ -218,27 +333,32 @@ class Tandem_LH:
         print(f"  Drag coefficient (CD):         {sol['CD']:.4f}")
         print(f"  Lift (L):                      {sol['L']:.2f} N")
         print(f"  Drag (D):                      {sol['D']:.2f} N")
-        print(f"  Required power:                {sol['P_required'] / 1e3:.2f} kW\n")
+        print(f"  Drag (L/D):                    {sol['L/D']:.2f} N")
+        print(f"  Power required:                {sol['P_required'] / 1e3:.2f} kW\n")
 
         print("WEIGHTS (N):")
         print(f"  Payload:                       {sol['W_payload']:.2f}")
         print(f"  Wing total:                    {sol['W_wing']:.2f}")
-        print(f"    └ Spar:                      {sol['W_spar']:.2f}")
-        print(f"    └ Skin:                      {sol['W_skin']:.2f}")
         print(f"  LH2 fuel:                      {sol['W_LH']:.2f}")
         print(f"  Tank:                          {sol['W_tank']:.2f}")
         print(f"  Fuel cell:                     {sol['W_fuel_cell']:.2f}")
+        #print(f"  Empennage:                     {sol['W_empenage']:.2f}")
+        print(f"  Avionics:                      {sol['W_avionics']:.2f}")
+        print(f"  Landing gear:                  {sol['W_gear']:.2f}")
+        print(f"  Motor:                         {sol['W_motor']:.2f}")
         print(f"  Miscellaneous:                 {sol['W_misc']:.2f}")
         print(f"  Total:                         {sol['W_total']:.2f}\n")
 
         print("MASSES (kg):")
         print(f"  Payload:                       {sol['M_payload']:.2f}")
         print(f"  Wing total:                    {sol['M_wing']:.2f}")
-        print(f"    └ Spar:                      {sol['M_spar']:.2f}")
-        print(f"    └ Skin:                      {sol['M_skin']:.2f}")
         print(f"  LH2 fuel:                      {sol['M_LH']:.2f}")
         print(f"  Tank:                          {sol['M_tank']:.2f}")
         print(f"  Fuel cell:                     {sol['M_fuel_cell']:.2f}")
+        #print(f"  Empennage:                     {sol['M_empenage']:.2f}")
+        print(f"  Avionics:                      {sol['M_avionics']:.2f}")
+        print(f"  Landing gear:                  {sol['M_gear']:.2f}")
+        print(f"  Motor:                         {sol['M_motor']:.2f}")
         print(f"  Miscellaneous:                 {sol['M_misc']:.2f}")
         print(f"  Total:                         {sol['M_total']:.2f}")
 
@@ -248,7 +368,7 @@ class Tandem_LH:
         cords_sol = sol['cords']
         wing_airfoil = self.wing_airfoil
         y_sections_sol = np.linspace(0, b_sol / 2, len(cords_sol))
-        wing_sol = Mass_wing(
+        wing_sol1 = asb.Wing(
             symmetric=True,
             xsecs=[
                 asb.WingXSec(
@@ -258,12 +378,93 @@ class Tandem_LH:
                 )
                 for i in range(len(cords_sol))
             ]
-        )
+        ).translate([0,0,0])
+        
+        wing_sol2 = asb.Wing(
+            symmetric=True,
+            xsecs=[
+                asb.WingXSec(
+                    xyz_le=[-0.25 * cords_sol[i], y_sections_sol[i], 0],
+                    chord=cords_sol[i],
+                    airfoil=wing_airfoil
+                )
+                for i in range(len(cords_sol))
+            ]
+        ).translate([8,0,2])
+        
+        V_stab = [asb.Wing(
+            name="V-stab",
+            xsecs=[
+                asb.WingXSec(
+                    xyz_le=[0, 0, 0],
+                    chord=3,
+                    airfoil=asb.Airfoil("ht08")
+                ),
+                asb.WingXSec(
+                    xyz_le=[2, 0, 2],
+                    chord=1,
+                    airfoil=asb.Airfoil("ht08")
+                )
+            ]
+        ).translate([6, 4, 0]),
 
-        self.airplane_sol = asb.Airplane(wings=[wing_sol])
+        asb.Wing(
+            name="V-stab",
+            xsecs=[
+                asb.WingXSec(
+                    xyz_le=[0, 0, 0],
+                    chord=3,
+                    airfoil=asb.Airfoil("ht08")
+                ),
+                asb.WingXSec(
+                    xyz_le=[2, 0, 2],
+                    chord=1,
+                    airfoil=asb.Airfoil("ht08")
+                )
+            ]
+        ).translate([6, -4, 0])
+        ]
+        
+        fuselages=[
+            asb.Fuselage(
+                name="Fuselage",
+                xsecs=[
+                    asb.FuselageXSec(
+                        xyz_c=[xi * 11, 0, 0],
+                        radius=5*asb.Airfoil("naca0020").local_thickness(x_over_c=xi)
+                    )
+                    for xi in np.cosspace(0, 1, 30)
+                ]
+            ).translate([-1,4,0]),
+            
+            asb.Fuselage(
+                name="Fuselage",
+                xsecs=[
+                    asb.FuselageXSec(
+                        xyz_c=[xi * 11, 0, 0],
+                        radius=5*asb.Airfoil("naca0020").local_thickness(x_over_c=xi)
+                    )
+                    for xi in np.cosspace(0, 1, 30)
+                ]
+            ).translate([-1,-4,0]),
+            
+            asb.Fuselage(
+                name="Fuselage",
+                xsecs=[
+                    asb.FuselageXSec(
+                        xyz_c=[xi * 5, 0, 0],
+                        radius=3*asb.Airfoil("naca0024").local_thickness(x_over_c=xi)
+                    )
+                    for xi in np.cosspace(0, 1, 30)
+                ]
+            ).translate([-1.5,0,-0.5])
+        ]
+
+        self.airplane_sol = asb.Airplane(wings=[wing_sol1] + [wing_sol2] + V_stab, fuselages=fuselages)
         
     def draw(self):
-        self.airplane_sol.draw()
+        #self.airplane_sol.draw(backend="matplotlib",set_axis_visibility=False, ax=None, thin_wings=True)
+        self.airplane_sol.draw_three_view()
         
     def plot_aero(self):
         airplane = self.airplane_sol
