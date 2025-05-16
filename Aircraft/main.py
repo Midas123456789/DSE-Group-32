@@ -12,6 +12,9 @@ from Aerodynamics.Aero_plotting import plot_h_Preq, plot_A_LD, plot_feasible_S_V
 from Weight_Estimations.WP_WS_diagram import WP_WS_Diagram
 from Performance.Performance import Performance
 
+import aerosandbox as asb
+import aerosandbox.weights as asbw
+
 
 class AircraftInputs:
     """Container for all aircraft design input parameters."""
@@ -23,15 +26,40 @@ class AircraftInputs:
 class Aircraft:
     """Represents an aircraft with performance, aerodynamic and weight estimation subsystems."""
     def __init__(self, inputs: AircraftInputs):
+        
+        self.opti = asb.Opti()
+        self.sol = self.opti.solve(verbose=False)
+        
         self.inputs = inputs
-
-        # ISA Properties
-        self.ISA = ISA_Calculator(
-            altitude=inputs.h_cruise,
-            length=inputs.chord_length,
+        
+        self.ISA = asb.Atmosphere(altitude=inputs.h_cruise)
+        self.rho = self.ISA.density()
+        
+        wing_airfoil = asb.Airfoil("sd7037")
+        wing = asb.Wing(
+            name       = "Main",
+            symmetric  = True,
+            xsecs=[
+                asb.WingXSec(  # 0
+                    xyz_le=[0, 0, 0],
+                    chord=inputs.chord,
+                    airfoil=wing_airfoil,
+                ),
+                asb.WingXSec(  # 1
+                    xyz_le=[inputs.sweep, inputs.span * (3/4), inputs.dihedral],
+                    chord=inputs.chord,
+                    airfoil=wing_airfoil,
+                ),
+                asb.WingXSec(  # 2
+                    xyz_le=[inputs.sweep * (7/8), inputs.span, inputs.dihedral],
+                    chord=inputs.chord,
+                    airfoil=wing_airfoil,
+                )
+            ]
         )
-        self.g = self.ISA.results[inputs.h_cruise]["Gravity [m/s2]"]
-        self.rho = self.ISA.results[inputs.h_cruise]["Density [kg/m3]"]
+        
+        self.configuration = asb.Airplane(wings=[wing], fuselages=[])
+        
 
         # Class I weight estimation
         self.class_I = Class_I_Weight_Estimation(
@@ -46,26 +74,25 @@ class Aircraft:
             endurance=inputs.endurance,
             battery_specific_energy_Wh_per_kg=inputs.battery_specific_energy_Wh_per_kg,
             n_p=inputs.n_p, c_p=inputs.c_p,
-            A=inputs.A, e=inputs.e, CD0=inputs.CD0, g=self.g,
+            g=inputs.g,
             iteration_limit=100, tolerance=0.01,
         )
-
-        self.aero = AircraftAerodynamic(
-            W=self.class_I.estimated_MTOM,
-            h=inputs.h_cruise, n_p=inputs.n_p,
-            S=inputs.S, A=inputs.A, e=inputs.e,
-            CD0=inputs.CD0, CL=inputs.CL_cruise
-        )
-
-        # Performance and aerodynamics
-        self.performance = Performance(self)
+        
+        
+        ## Aerodynamic formula set-up
+        #self.aero = AircraftAerodynamic(ac=self)
+        
+        # Performance
+        self.performance = Performance(ac=self)
 
 if __name__ == "__main__":
     req = Requirements()
+    
     inputs = AircraftInputs(
         
         # Mission
         endurance=req.endurance,
+        g = 9.80665,
         
         # Weights
         payload_weight_kg=req.payload_weight_kg,
@@ -78,20 +105,19 @@ if __name__ == "__main__":
         
         # Currently not using fuel!!!
         residual_fuel_fraction=0.00,
-        W1_WTO=0.997,
-        W2_W1=0.995,
-        W3_W2=0.996,
-        W4_W3=0.998,
-        W5_W4=0.931,
-        W6_W5=0.999,
-        W7_W6=0.998,
-        W8_W7=0.995,
-        Wfinal_W8=0.997,
+        W1_WTO    = 0.997,
+        W2_W1     = 0.995,
+        W3_W2     = 0.996,
+        W4_W3     = 0.998,
+        W5_W4     = 0.931,
+        W6_W5     = 0.999,
+        W7_W6     = 0.998,
+        W8_W7     = 0.995,
+        Wfinal_W8 = 0.997,
         
         # Propulsion system
         n_p=0.85, 
         c_p=0.6,
-        sfc_kg_per_kw_hr=0.2,
         
         # Design parameters
         CL_cruise=1.2, 
@@ -99,11 +125,10 @@ if __name__ == "__main__":
         CL_land=2.2,
         
         # Configuration
-        CD0=0.020, 
-        S=30, 
-        A=25, 
-        e=0.85,
-        chord_length=3, 
+        chord=8, 
+        span=30,
+        sweep=28,
+        dihedral=5,
         #fuselage_length=4, 
         #fuselage_diameter=0.001,
         
@@ -124,9 +149,9 @@ if __name__ == "__main__":
     #print(f"Cruise velocity for maximum endurance [m/s]: {ac.performance.optimum_V:.2f} m/s")
     #print(50 * '-')
     
-    print(ac.ISA)
+    #print(ac.ISA)
     print(ac.class_I)
-    print(ac.aero)
+    #print(ac.aero)
     print(ac.performance)
     
     

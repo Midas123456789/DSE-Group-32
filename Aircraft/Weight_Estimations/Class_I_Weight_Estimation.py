@@ -10,7 +10,7 @@ class Class_I_Weight_Estimation():
     def __init__(self, payload_weight_kg,
                     residual_fuel_fraction ,empty_weight_fraction, initial_mtow_guess_kg, iteration_limit, tolerance, 
                     W1_WTO, W2_W1, W3_W2, W4_W3, W5_W4, W6_W5, W7_W6, W8_W7, Wfinal_W8,
-                    n_p, c_p, g, A, e, CD0,
+                    n_p, c_p, g,
                     battery_power_available, battery_specific_energy_Wh_per_kg, endurance):
         
         # Requirements input
@@ -19,7 +19,7 @@ class Class_I_Weight_Estimation():
         # Battery inputs
         self.battery_power_available = battery_power_available
         self.battery_specific_energy_Wh_per_kg = battery_specific_energy_Wh_per_kg
-        self.battery_mass_kg = ((battery_power_available * (endurance * 24)) / battery_specific_energy_Wh_per_kg) if battery_specific_energy_Wh_per_kg > 0 else 0
+        self.battery_mass_kg = 0 #((battery_power_available * (endurance * 24)) / battery_specific_energy_Wh_per_kg) if battery_specific_energy_Wh_per_kg > 0 else 0
         
         # Inputs for first weight estimation
         self.fuel_fraction = 1 - (W1_WTO * W2_W1 * W3_W2 * W4_W3 * W5_W4 * W6_W5 * W7_W6 * W8_W7 * Wfinal_W8)
@@ -44,16 +44,12 @@ class Class_I_Weight_Estimation():
         self.n_p = n_p
         self.c_p = (c_p * 0.453592) / (745.7 * 3600)
         self.g = g
-        self.A = A
-        self.e = e
-        self.CD0 = CD0
         
         self.results = {}
         self.converged = False
         
         self.Determine_MTOW()
         self.Determine_Used_Fuel()
-        self.Determine_MLW()
         #self.Determine_Brequet_Range()
         #self.Determine_Brequet_Endurance()
     
@@ -94,12 +90,6 @@ class Class_I_Weight_Estimation():
         self.W_f_used = (1 - M_ff) * self.MTOW_kg
         self.results["Used Fuel Estimate [kg]"] = round(self.W_f_used, 3)
     
-    def Determine_MLW(self):
-        if self.converged:
-            residual_fuel_weight = self.estimated_fuel_mass * self.residual_fuel_fraction
-            mlw = self.estimated_OEW + self.payload_weight_kg + self.battery_mass_kg + residual_fuel_weight
-            self.results["Maximum Landing Weight [kg]"] = round(mlw, 3)
-    
     def Determine_Maximum_Lift_Drag_Ratio(self):
         self.L_D = np.sqrt((np.pi * self.A * self.e) / (4 * self.CD0))
     
@@ -110,14 +100,14 @@ class Class_I_Weight_Estimation():
         # Prepare list of key-value pairs to print
         results_data = {
             "Maximum Take-off Mass [kg]": getattr(self, "estimated_MTOM", None),
-            "Maximum Take-off Weight [N]": getattr(self, "estimated_MTOW", None),
+            #"Maximum Take-off Weight [N]": getattr(self, "estimated_MTOW", None),
             "Operating Empty Mass [kg]": getattr(self, "estimated_OEM", None),
-            "Operating Empty Weight [N]": getattr(self, "estimated_OEW", None),
+            #"Operating Empty Weight [N]": getattr(self, "estimated_OEW", None),
+            "Payload Mass [kg]": getattr(self, "payload_weight_kg", None),
             "Fuel Mass [kg]": getattr(self, "estimated_fuel_mass", None),
-            "Fuel Weight [N]": getattr(self, "estimated_fuel_weight", None),
-            "Battery Mass [kg]": self.battery_mass_kg,
             "Used Fuel Estimate [kg]": getattr(self, "W_f_used", None),
-            "Maximum Landing Weight [kg]": self.results.get("Maximum Landing Weight [kg]", None)
+            #"Fuel Weight [N]": getattr(self, "estimated_fuel_weight", None),
+            "Battery Mass [kg]": self.battery_mass_kg,
         }
 
         max_key_length = max(len(k) for k in results_data)

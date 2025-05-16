@@ -1,24 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize_scalar
+import aerosandbox as asb
 
 class Performance:
     def __init__(self, ac):
         self.ac = ac
 
         # Inputs from aircraft
-        self.A = ac.inputs.A
-        self.e = ac.inputs.e
-        self.CD0 = ac.inputs.CD0
         self.n_p = ac.inputs.n_p
-        self.S = ac.inputs.S
         self.altitude = ac.inputs.h_cruise
         self.isa = ac.ISA
-        self.rho = self.isa.results[self.altitude]["Density [kg/m3]"]
-        self.g = self.isa.results[self.altitude]["Gravity [m/s2]"]
+        self.rho = ac.rho
+        self.g = ac.inputs.g
         self.estimated_MTOM = ac.class_I.estimated_MTOM
         self.weight_N = self.estimated_MTOM * self.g
-        self.L_D_endurance = np.sqrt((3 * np.pi * self.A * self.e) / self.CD0)
+        #self.L_D_endurance = np.sqrt((3 * np.pi * self.A * self.e) / self.CD0)
 
         # Propulsion choice and duration
         self.propulsion_type = ac.inputs.propulsion_type.lower()  # 'battery' or 'fuel'
@@ -29,23 +26,82 @@ class Performance:
 
         self.design_for_endurance()
 
-    def design_for_endurance(self):
+    def compute_drag_and_power(self):
+
+        airplane = self.ac.configuration
+        S = airplane.s_ref
+        W = self.ac.class_I.estimated_MTOW
+
+        velocities = np.linspace(0, 10, 200)  # avoid divide-by-zero at V=0
+        V_list = []
+        DV_list = []
+
+        for V in velocities:
+            # Coarse sweep to find approximate trim angle
+            AoAs_coarse = np.linspace(-2, 15, 17)
+            min_diff = float('inf')
+            trim_guess = 0
+
+            for alpha in AoAs_coarse:
+                op_point = asb.OperatingPoint(velocity=V, alpha=alpha)
+                aero = asb.AeroBuildup(airplane=airplane, op_point=op_point).run()
+                L = 0.5 * self.rho * V**2 * S * aero['CL']
+                diff = abs(L - W)
+                if diff < min_diff:
+                    min_diff = diff
+                    trim_guess = alpha
+            print(f'alpha={trim_guess:.2f}, velocity={V:.2f}')
+
+            # Refined sweep around the guess
+            AoAs_fine = np.linspace(trim_guess - 1.0, trim_guess + 1.0, 10)
+            min_diff = float('inf')
+            best_aero = None
+
+            for alpha in AoAs_fine:
+                op_point = asb.OperatingPoint(velocity=V, alpha=alpha)
+                aero = asb.AeroBuildup(airplane=airplane, op_point=op_point).run()
+                L = 0.5 * self.rho * V**2 * S * aero['CL']
+                diff = abs(L - W)
+                if diff < min_diff:
+                    min_diff = diff
+                    best_aero = aero
+
+            if best_aero is not None:
+                D = 0.5 * self.rho * V**2 * S * best_aero['CD']
+                DV_list.append(D * V)
+                V_list.append(V)
+
+        DV_array = np.array(DV_list)
+        V_array = np.array(V_list)
+
+        min_power_idx = np.nanargmin(DV_array)
+        self.optimum_V = V_array[min_power_idx]
+        self.battery_power_required = DV_array[min_power_idx]
+
+        # === Plot ===
+        plt.figure(figsize=(10, 6))
+        plt.plot(V_array, DV_array, label="Power Required [W]")
+        plt.xlabel("Velocity [m/s]")
+        plt.ylabel("Power / Drag")
+        plt.grid(True)
+        plt.legend()
+        plt.title("Power Required vs. Velocity")
+        plt.tight_layout()
+        plt.show()
+
+
+    def design_for_endurance(self, opti=False):
         """Optimizes flight velocity for minimum power (max endurance) and computes energy/fuel needs."""
         # Find velocity that minimizes power required
-        result = minimize_scalar(
-            lambda V: self.ac.aero.compute_drag_and_power(V)[1],
-            bounds=(10, 200),
-            method='bounded'
-        )
-        self.optimum_V = result.x
-        _, self.battery_power_required = self.ac.aero.compute_drag_and_power(self.optimum_V)
+        if opti:
+            self.compute_drag_and_power()
 
-        if self.propulsion_type == 'battery':
-            self.handle_battery_endurance()
-        elif self.propulsion_type == 'hydrogen':
-            self.handle_hydrogen_endurance()
-        else:
-            raise ValueError("Unknown propulsion type. Use 'battery' or 'fuel'.")
+            if self.propulsion_type == 'battery':
+                self.handle_battery_endurance()
+            elif self.propulsion_type == 'hydrogen':
+                self.handle_hydrogen_endurance()
+            else:
+                raise ValueError("Unknown propulsion type. Use 'battery' or 'fuel'.")
 
     def handle_battery_endurance(self):
         """Battery-specific endurance and energy calculation."""
