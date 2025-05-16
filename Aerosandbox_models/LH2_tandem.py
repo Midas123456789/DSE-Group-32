@@ -463,8 +463,8 @@ class Tandem_LH:
         self.airplane_sol = asb.Airplane(wings=[wing_sol1] + [wing_sol2] + V_stab, fuselages=fuselages)
         
     def draw(self):
-        #self.airplane_sol.draw(backend="matplotlib",set_axis_visibility=False, ax=None, thin_wings=True)
-        self.airplane_sol.draw_three_view()
+        self.airplane_sol.draw(backend="matplotlib",set_axis_visibility=False, ax=None, thin_wings=True)
+        #self.airplane_sol.draw_three_view()
         
     def plot_aero(self):
         airplane = self.airplane_sol
