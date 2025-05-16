@@ -29,7 +29,7 @@ class Performance:
         # Performance
         self.configuration = configuration
     
-    def find_power_parameters(self):
+    def find_battery_or_hydrogen_weight_parameters(self):
         if self.propulsion_type == 'battery':
             self.handle_battery_endurance()
         elif self.propulsion_type == 'hydrogen':

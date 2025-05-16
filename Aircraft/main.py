@@ -151,7 +151,7 @@ if __name__ == "__main__":
     print(ac.class_I)
     
     ac.performance.optimize_for_maximum_endurance(ac.class_I.estimated_MTOM)
-    ac.performance.find_power_parameters()
+    #ac.performance.find_battery_or_hydrogen_weight_parameters()
     print(ac.performance)
 
     ac.configuration.draw_three_view()
