@@ -13,5 +13,5 @@ aero = asb.AeroBuildup(
     op_point=asb.OperatingPoint(velocity=30, alpha=alpha, beta=0),
 ).run()
 
-plt.plot(alpha, aero["Cl"]/2)
+plt.plot(alpha, aero["CL"]/aero["CD"])
 plt.show()
