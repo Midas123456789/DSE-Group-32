@@ -3,11 +3,14 @@ import matplotlib.pyplot as plt
 
 class WP_WS_Diagram:
     
-    def __init__(self, V_cruise=0, V_stall=0, climb_rate=0, climb_gradient=0, e=0, CD0=0, h=0,
-            CL_MAX_clean=None, CL_MAX_land=0, CL_MAX_TO=None, A_design=0, TOP=0, landing_distance=0, f=1, n_p=1, prop_setting=1, rho=1.225):
-        # Ensure clean and TO CLs are lists
+    def __init__(self, ac=None, V_cruise=0, V_stall=0, climb_rate=0, climb_gradient=0, e=0, CD0=0, h=0,
+            CL_MAX_clean=None, CL_MAX_land=0, CL_MAX_TO=None, A_design=0, TOP=0, landing_distance=0, f=1, n_p=1, prop_setting=1, rho=1.225, plot=True):
+        
         self.x_max = 1500
         self.y_max = 0.4
+        self.plot = plot
+        
+        self.ac = ac
         
         self.CL_max_clean = CL_MAX_clean if isinstance(CL_MAX_clean, list) else [CL_MAX_clean]
         self.CL_max_land  = CL_MAX_land if isinstance(CL_MAX_land, list) else [CL_MAX_land]
@@ -196,7 +199,8 @@ class WP_WS_Diagram:
 
         plt.suptitle("Wing Loading vs Weight-to-Power Across Altitudes", fontsize=16)
         plt.tight_layout(rect=[0, 0, 1, 0.95])
-        plt.show()
+        if self.plot:
+            plt.show()
 
     def drag_polar(self, A=0):
         return (self.CD0 + (self.CL_max_clean[len(self.CL_max_clean) - 1] ** 2) / (np.pi * A * self.e))  # Drag Coefficient
@@ -206,8 +210,8 @@ if __name__ == "__main__":
     aircraft = WP_WS_Diagram(
         
         # Aerodynamics
-        e              = 0.85,             # Oswald efficiency factor
-        CD0            = 0.020,            # Parasite drag
+        e              = 0.85,   # Oswald efficiency factor
+        CD0            = 0.020,  # Parasite drag
         h              = 15000,  # Altitude
         
         # Weight estimation
@@ -215,7 +219,7 @@ if __name__ == "__main__":
         
         # Velocity
         V_stall        = 30,    # Pre-given stall speed
-        V_cruise       = 36.64,    # Pre-given cruise speed
+        V_cruise       = 36.64, # Pre-given cruise speed
         climb_rate     = 5,
         climb_gradient = 0.01,
         
@@ -227,7 +231,7 @@ if __name__ == "__main__":
         CL_MAX_clean   = [1.2], # Possible clean CL
         CL_MAX_TO      = [2.0], # Possible take-off CL
         CL_MAX_land    = [2.2], # Possible landing CL 
-        A_design       = [25], # Different output settings of the propellor
+        A_design       = [25],  # Different output settings of the propellor
         
         # Propulsion
         n_p            = 0.85,  # Propellor efficiency

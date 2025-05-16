@@ -105,8 +105,8 @@ class ClassIIWeightEstimation:
 # Example usage
 if __name__ == "__main__":
     
-    battery_mass = Class_I_Weight_Estimate.battery_mass_kg
-    payload_mass = Class_I_Weight_Estimate.payload_weight_kg
+    battery_mass = 300
+    payload_mass = 100
 
     Class_II = ClassIIWeightEstimation(
         payload_weight_kg=payload_mass,
@@ -115,7 +115,7 @@ if __name__ == "__main__":
         A=25,
         fuselage_length=10,
         fuselage_diameter=1.5,
-        initial_mtow_guess_kg=Class_I_Weight_Estimate.MTOW_kg
+        initial_mtow_guess_kg= 2000
     )
 
     print(Class_II)
