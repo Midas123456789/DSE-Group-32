@@ -38,13 +38,13 @@ class Performance:
             raise ValueError("Unknown propulsion type. Use 'battery' or 'fuel'.")
     
     def optimize_for_maximum_endurance(self, estimated_MTOM):
-        
+        pass
         self.estimated_MTOM = estimated_MTOM
         airplane = self.configuration
         S = airplane.s_ref
         W = self.estimated_MTOM * self.g
         
-        velocities = np.linspace(1, 10, 380)  # avoid V=0
+        velocities = np.linspace(5, 20, 300)  # avoid V=0
         V_list = []
         DV_list = []
         can_fly_mask = []

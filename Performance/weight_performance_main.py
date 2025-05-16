@@ -1,8 +1,12 @@
 import aerosandbox as asb
+import os
+import sys
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from Requirements import Requirements
 from Weight_Estimations.Class_I_Weight_Estimation import Class_I_Weight_Estimation
-from Performance.Performance import Performance
+from Performance import Performance
+from Aerosandbox_models.LH2_tandem import *
 
 
 class AircraftInputs:
@@ -27,9 +31,6 @@ class Aircraft:
         self.ISA = asb.Atmosphere(altitude=inputs.h_cruise)
         self.rho = self.ISA.density()
         
-        # Set up aerodynamic profile
-        self.configuration = asb.Airplane(wings=[inputs.wing], fuselages=[])
-
         # Class I weight estimation
         self.class_I = Class_I_Weight_Estimation(
             
@@ -70,7 +71,7 @@ class Aircraft:
             propulsion_type = inputs.propulsion_type,
             endurance = inputs.endurance,
             charge_endurance = inputs.charge_endurance,
-            configuration = self.configuration,
+            configuration = inputs.configuration,
             hydrogen_specific_energy_Wh_per_kg = inputs.hydrogen_specific_energy_Wh_per_kg, 
             hydrogen_density_kg_per_m3 = inputs.hydrogen_density_kg_per_m3, 
             tank_mass_fraction = inputs.tank_mass_fraction,
@@ -80,6 +81,107 @@ class Aircraft:
 if __name__ == "__main__":
     req = Requirements()
     
+    span = 42.30
+    N_cords = 2
+    cords = [2.88, 0.82]
+    wing_airfoil = asb.Airfoil("sd7037")
+    
+    y_sections = np.linspace(0, span / 2, N_cords)
+    wing1 = asb.Wing(
+        symmetric=True,
+        xsecs=[
+            asb.WingXSec(
+                xyz_le=[-0.25 * cords[i], y_sections[i], 0],
+                chord=cords[i],
+                airfoil=wing_airfoil
+            )
+            for i in range(N_cords)
+        ]
+    )
+    
+    wing2 = asb.Wing(
+        symmetric=True,
+        xsecs=[
+            asb.WingXSec(
+                xyz_le=[-0.25 * cords[i], y_sections[i], 0],
+                chord=cords[i],
+                airfoil=wing_airfoil
+            )
+            for i in range(N_cords)
+        ]
+    ).translate([9,0,0])
+    
+    V_stab = [asb.Wing(
+        name="V-stab",
+        xsecs=[
+            asb.WingXSec(
+                xyz_le=[0, 0, 0],
+                chord=3,
+                airfoil=asb.Airfoil("ht08")
+            ),
+            asb.WingXSec(
+                xyz_le=[2, 0, 2],
+                chord=1,
+                airfoil=asb.Airfoil("ht08")
+            )
+        ]
+    ).translate([6, 4, 0]),
+
+    asb.Wing(
+        name="V-stab",
+        xsecs=[
+            asb.WingXSec(
+                xyz_le=[0, 0, 0],
+                chord=3,
+                airfoil=asb.Airfoil("ht08")
+            ),
+            asb.WingXSec(
+                xyz_le=[2, 0, 2],
+                chord=1,
+                airfoil=asb.Airfoil("ht08")
+            )
+        ]
+    ).translate([6, -4, 0])
+    ]
+    
+    fuselages=[
+        asb.Fuselage(
+            name="Fuselage",
+            xsecs=[
+                asb.FuselageXSec(
+                    xyz_c=[xi * 11, 0, 0],
+                    radius=5*asb.Airfoil("naca0020").local_thickness(x_over_c=xi)
+                )
+                for xi in np.cosspace(0, 1, 30)
+            ]
+        ).translate([-1,4,0]),
+        
+        asb.Fuselage(
+            name="Fuselage",
+            xsecs=[
+                asb.FuselageXSec(
+                    xyz_c=[xi * 11, 0, 0],
+                    radius=5*asb.Airfoil("naca0020").local_thickness(x_over_c=xi)
+                )
+                for xi in np.cosspace(0, 1, 30)
+            ]
+        ).translate([-1,-4,0]),
+        
+        asb.Fuselage(
+            name="Fuselage",
+            xsecs=[
+                asb.FuselageXSec(
+                    xyz_c=[xi * 5, 0, 0],
+                    radius=3*asb.Airfoil("naca0010").local_thickness(x_over_c=xi)
+                )
+                for xi in np.cosspace(0, 1, 30)
+            ]
+        ).translate([-1.5,0,-0.5])
+    ]
+    
+    configuration = asb.Airplane(wings=[wing1] + [wing2] + V_stab, fuselages=fuselages)
+    S = wing1.area() + wing2.area()
+
     inputs = AircraftInputs(
         
         # Mission
@@ -119,29 +221,8 @@ if __name__ == "__main__":
         h_cruise        = 15000,
         propulsion_type = 'hydrogen', # battery (not fully integrated yet!)
         
-        # Configuration
-        wing = asb.Wing(
-            name       = "Main",
-            symmetric  = True,
-            xsecs=[
-                asb.WingXSec(  # 0
-                    xyz_le=[0, 0, 0],
-                    chord=8,
-                    airfoil=asb.Airfoil("sd7037"),
-                ),
-                asb.WingXSec(  # 1
-                    xyz_le=[10, 20, 5],
-                    chord=8,
-                    airfoil=asb.Airfoil("sd7037"),
-                ),
-                asb.WingXSec(  # 2
-                    xyz_le=[20, 30, 5],
-                    chord=8,
-                    airfoil=asb.Airfoil("sd7037"),
-                )
-            ]
-        )
-        
+        configuration = configuration,
+        S = S,
     )
     ac = Aircraft(inputs)
     
@@ -154,6 +235,6 @@ if __name__ == "__main__":
     #ac.performance.find_battery_or_hydrogen_weight_parameters()
     print(ac.performance)
 
-    ac.configuration.draw_three_view()
+    configuration.draw(backend="matplotlib",set_axis_visibility=False, ax=None, thin_wings=True)
 
 
