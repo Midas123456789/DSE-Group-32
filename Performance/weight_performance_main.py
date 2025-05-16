@@ -2,7 +2,7 @@ import aerosandbox as asb
 
 from Requirements import Requirements
 from Weight_Estimations.Class_I_Weight_Estimation import Class_I_Weight_Estimation
-from Performance_Design.Performance import Performance
+from Performance.Performance import Performance
 
 
 class AircraftInputs:

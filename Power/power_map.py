@@ -1,4 +1,4 @@
-from solar_power_model import *  # Must define Power class with average_power_12h()
+from Power.solar_power_model import *  # Must define Power class with average_power_12h()
 import plotly.graph_objects as go
 import numpy as np
 

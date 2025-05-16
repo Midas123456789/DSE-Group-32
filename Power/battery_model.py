@@ -1,4 +1,4 @@
-from solar_power_model import *
+from Power.solar_power_model import *
 
 class Battery:
     def __init__(self, energy_density, density, capasity):

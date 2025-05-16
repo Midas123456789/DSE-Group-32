@@ -1,4 +1,4 @@
-from solar_power_model import Power
+from Power.solar_power_model import Power
 import numpy as np
 
 #Values from sources
