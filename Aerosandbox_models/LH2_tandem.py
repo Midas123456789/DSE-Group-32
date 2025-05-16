@@ -29,7 +29,7 @@ def motor_weight(P_r):
 
 
 class Tandem_LH:
-    def __init__(self, N_cords = 2, wing_airfoil = asb.Airfoil("sd7037"), altitude = 18e3, mission_days = 7, W_payload = 1200, P_payload = 7e3):
+    def __init__(self, N_cords = 2, wing_airfoil = asb.Airfoil("sd7037"), altitude = 12e3, mission_days = 7, W_payload = 1000, P_payload = 5e3):
         #GEOMETRY
         self.N_cords = N_cords
         self.wing_airfoil = wing_airfoil
@@ -176,6 +176,7 @@ class Tandem_LH:
         
         self.airplane = asb.Airplane(wings=[self.wing1] + [self.wing2] + V_stab, fuselages=fuselages)
         self.wing_area = self.wing1.area() + self.wing2.area()
+        self.airplane.s_ref = self.wing_area
         
     def _setup_aero(self):
         self.aero = asb.AeroBuildup(airplane=self.airplane, op_point=self.op).run()
@@ -184,12 +185,13 @@ class Tandem_LH:
 
     def _setup_constraints(self):
         self.opti.subject_to([
-        self.cords > 0,
+        self.cords > 0.5,
         np.diff(self.cords) <= 0,
         self.wing_area < 2000,
         self.L >= self.W_total,
         self.b > 15,
-        self.V > 5
+        self.V > 5,
+        
         ])
         
     def _get_spar(self):
@@ -368,7 +370,7 @@ class Tandem_LH:
         cords_sol = sol['cords']
         wing_airfoil = self.wing_airfoil
         y_sections_sol = np.linspace(0, b_sol / 2, len(cords_sol))
-        wing_sol1 = asb.Wing(
+        wings = [asb.Wing(
             symmetric=True,
             xsecs=[
                 asb.WingXSec(
@@ -378,9 +380,9 @@ class Tandem_LH:
                 )
                 for i in range(len(cords_sol))
             ]
-        ).translate([0,0,0])
+        ).translate([0,0,0]),
         
-        wing_sol2 = asb.Wing(
+        asb.Wing(
             symmetric=True,
             xsecs=[
                 asb.WingXSec(
@@ -390,9 +392,10 @@ class Tandem_LH:
                 )
                 for i in range(len(cords_sol))
             ]
-        ).translate([8,0,2])
+        ).translate([8,0,2])]
         
         V_stab = [asb.Wing(
+            symmetric=True,
             name="V-stab",
             xsecs=[
                 asb.WingXSec(
@@ -406,27 +409,12 @@ class Tandem_LH:
                     airfoil=asb.Airfoil("ht08")
                 )
             ]
-        ).translate([6, 4, 0]),
-
-        asb.Wing(
-            name="V-stab",
-            xsecs=[
-                asb.WingXSec(
-                    xyz_le=[0, 0, 0],
-                    chord=3,
-                    airfoil=asb.Airfoil("ht08")
-                ),
-                asb.WingXSec(
-                    xyz_le=[2, 0, 2],
-                    chord=1,
-                    airfoil=asb.Airfoil("ht08")
-                )
-            ]
-        ).translate([6, -4, 0])
+        ).translate([6, 4, 0])
         ]
         
         fuselages=[
             asb.Fuselage(
+                
                 name="Fuselage",
                 xsecs=[
                     asb.FuselageXSec(
@@ -460,7 +448,8 @@ class Tandem_LH:
             ).translate([-1.5,0,-0.5])
         ]
 
-        self.airplane_sol = asb.Airplane(wings=[wing_sol1] + [wing_sol2] + V_stab, fuselages=fuselages)
+        self.airplane_sol = asb.Airplane(wings=wings + V_stab, fuselages=fuselages)
+        self.airplane_sol.s_ref = wings[0].area() + wings[1].area()
         
     def draw(self):
         self.airplane_sol.draw(backend="matplotlib",set_axis_visibility=False, ax=None, thin_wings=True)
@@ -482,5 +471,5 @@ if __name__ == "__main__":
     LH_plane = Tandem_LH()
     LH_plane.solve()
     LH_plane.print_solution()
-    LH_plane.draw()
-    #LH_plane.plot_aero()
+    #LH_plane.draw()
+    LH_plane.plot_aero()
