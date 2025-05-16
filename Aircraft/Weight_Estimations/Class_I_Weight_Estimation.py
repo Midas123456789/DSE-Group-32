@@ -7,11 +7,14 @@ class Class_I_Weight_Estimation():
     Class I Weight Estimation based on assumed mass fractions and MTOW iteration,
     including fuel and battery usage estimation.
     """
-    def __init__(self, payload_weight_kg,
+    def __init__(self, propulsion_type, payload_weight_kg,
                     residual_fuel_fraction ,empty_weight_fraction, initial_mtow_guess_kg, iteration_limit, tolerance, 
-                    W1_WTO, W2_W1, W3_W2, W4_W3, W5_W4, W6_W5, W7_W6, W8_W7, Wfinal_W8,
-                    n_p, c_p, g,
-                    battery_power_available, battery_specific_energy_Wh_per_kg, endurance):
+                    W1_WTO, W2_W1, W3_W2, W4_W3, W5_W4, W6_W5, W7_W6, W8_W7, Wfinal_W8, n_p, c_p, g,
+                    battery_power_available, battery_specific_energy_Wh_per_kg, endurance, charge_endurance):
+        
+        # Class set-up
+        self.results = {}
+        self.converged = False
         
         # Requirements input
         self.payload_weight_kg = payload_weight_kg
@@ -19,7 +22,7 @@ class Class_I_Weight_Estimation():
         # Battery inputs
         self.battery_power_available = battery_power_available
         self.battery_specific_energy_Wh_per_kg = battery_specific_energy_Wh_per_kg
-        self.battery_mass_kg = 0 #((battery_power_available * (endurance * 24)) / battery_specific_energy_Wh_per_kg) if battery_specific_energy_Wh_per_kg > 0 else 0
+        self.battery_mass_kg = ((battery_power_available * (charge_endurance * 24)) / battery_specific_energy_Wh_per_kg) if battery_specific_energy_Wh_per_kg > 0 else 0
         
         # Inputs for first weight estimation
         self.fuel_fraction = 1 - (W1_WTO * W2_W1 * W3_W2 * W4_W3 * W5_W4 * W6_W5 * W7_W6 * W8_W7 * Wfinal_W8)
@@ -40,25 +43,21 @@ class Class_I_Weight_Estimation():
         self.W8_W7 = W8_W7
         self.Wfinal_W8 = Wfinal_W8
         
-        # Range estimation variables
+        # Propulsion
         self.n_p = n_p
         self.c_p = (c_p * 0.453592) / (745.7 * 3600)
         self.g = g
-        
-        self.results = {}
-        self.converged = False
-        
-        self.Determine_MTOW()
-        self.Determine_Used_Fuel()
-        #self.Determine_Brequet_Range()
-        #self.Determine_Brequet_Endurance()
+        self.propulsion_type = propulsion_type
     
     def Determine_MTOW(self):
         
         for _ in range(self.iteration_limit):
             OEW = self.MTOW_kg * self.empty_weight_fraction
             fuel_weight = self.MTOW_kg * self.fuel_fraction
-            new_MTOW = OEW + fuel_weight + self.payload_weight_kg + self.battery_mass_kg
+            if self.propulsion_type == 'hydrogen':
+                new_MTOW = OEW + fuel_weight + self.payload_weight_kg
+            elif self.propulsion_type == 'battery':
+                new_MTOW = OEW + self.payload_weight_kg + self.battery_mass_kg
             
             if abs(new_MTOW - self.MTOW_kg) < self.tolerance:
                 self.converged = True
@@ -109,18 +108,17 @@ class Class_I_Weight_Estimation():
             #"Fuel Weight [N]": getattr(self, "estimated_fuel_weight", None),
             "Battery Mass [kg]": self.battery_mass_kg,
         }
-
+        
         max_key_length = max(len(k) for k in results_data)
         header = f"{'Parameter'.ljust(max_key_length)} | Value"
         output.append(header)
         output.append("-" * len(header))
-
+        
         for key, value in results_data.items():
             if value is not None:
                 output.append(f"{key.ljust(max_key_length)} | {value:>13,.3f}")
             else:
                 output.append(f"{key.ljust(max_key_length)} | {'Not computed':>13}")
-
         return "\n".join(output)
 
 
@@ -161,4 +159,3 @@ if __name__ == "__main__":
     )
     
     print(Class_I_Weight_Estimate)
-    #Class_I_Weight_Estimate.Plot_Payload_Range_Diagram()

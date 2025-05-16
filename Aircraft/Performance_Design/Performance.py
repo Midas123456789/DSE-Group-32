@@ -4,27 +4,32 @@ import aerosandbox as asb
 
 class Performance:
     
-    def __init__(self, ac, plot):
-        self.ac = ac
+    def __init__(self, plot, n_p, h_cruise, rho, g, battery_power_available, battery_specific_energy_Wh_per_kg, 
+                propulsion_type, endurance, charge_endurance, configuration, hydrogen_specific_energy_Wh_per_kg, hydrogen_density_kg_per_m3, tank_mass_fraction):
+        
+        # Class config
         self.show_plot = plot
         
         # Inputs from aircraft inputs and weight estimation
-        self.n_p = ac.inputs.n_p
-        self.altitude = ac.inputs.h_cruise
-        self.isa = ac.ISA
-        self.rho = ac.rho
-        self.g = ac.inputs.g
-        self.estimated_MTOM = ac.class_I.estimated_MTOM
-        self.weight_N = self.estimated_MTOM * self.g
-        self.battery_power_available = ac.inputs.battery_power_available  # in W
-        self.battery_specific_energy_Wh_per_kg = ac.inputs.battery_specific_energy_Wh_per_kg
+        self.n_p = n_p
+        self.altitude = h_cruise
+        self.rho = rho
+        self.g = g
+        self.battery_power_available = battery_power_available  # in W
+        self.battery_specific_energy_Wh_per_kg = battery_specific_energy_Wh_per_kg
+        self.hydrogen_specific_energy_Wh_per_kg = hydrogen_specific_energy_Wh_per_kg
+        self.hydrogen_density_kg_per_m3 = hydrogen_density_kg_per_m3
+        self.tank_mass_fraction = tank_mass_fraction
         
         # Propulsion choice and duration
-        self.propulsion_type = ac.inputs.propulsion_type.lower()  # 'battery' or 'fuel'
-        self.desired_endurance_sec = ac.inputs.endurance * 24 * 3600  # days → seconds
+        self.propulsion_type = propulsion_type
+        self.desired_endurance_sec = endurance * 24 * 3600  # days → seconds
+        self.desired_charge_endurance_sec = charge_endurance * 24 * 3600 # days → seconds
         
-        # Run functions
-        self.compute_drag_and_power()
+        # Performance
+        self.configuration = configuration
+    
+    def find_power_parameters(self):
         if self.propulsion_type == 'battery':
             self.handle_battery_endurance()
         elif self.propulsion_type == 'hydrogen':
@@ -32,13 +37,14 @@ class Performance:
         else:
             raise ValueError("Unknown propulsion type. Use 'battery' or 'fuel'.")
     
-    def compute_drag_and_power(self):
-    
-        airplane = self.ac.configuration
-        S = airplane.s_ref
-        W = self.ac.class_I.estimated_MTOW
+    def optimize_for_maximum_endurance(self, estimated_MTOM):
         
-        velocities = np.linspace(1, 20, 380)  # avoid V=0
+        self.estimated_MTOM = estimated_MTOM
+        airplane = self.configuration
+        S = airplane.s_ref
+        W = self.estimated_MTOM * self.g
+        
+        velocities = np.linspace(1, 10, 380)  # avoid V=0
         V_list = []
         DV_list = []
         can_fly_mask = []
@@ -123,14 +129,14 @@ class Performance:
     
     def handle_battery_endurance(self):
         """Battery-specific endurance and energy calculation."""
-        energy_required_Wh = self.battery_power_required * self.desired_endurance_sec / 3600
+        energy_required_Wh = self.battery_power_required * self.desired_charge_endurance_sec / 3600
         battery_mass_kg = energy_required_Wh / self.battery_specific_energy_Wh_per_kg
         self.battery_mass_kg = battery_mass_kg
     
     def handle_hydrogen_endurance(self):
         """Estimate required hydrogen mass for given endurance and power."""
         # Find required energy
-        hydrogen_specific_energy_Wh_per_kg = self.ac.inputs.hydrogen_specific_energy_Wh_per_kg  
+        hydrogen_specific_energy_Wh_per_kg = self.hydrogen_specific_energy_Wh_per_kg  
         energy_required_Wh = self.battery_power_required * self.desired_endurance_sec / 3600 
         
         # Find required mass of hydrogen
@@ -138,11 +144,11 @@ class Performance:
         self.hydrogen_mass_kg = hydrogen_mass_kg
         
         # Find required tank size
-        hydrogen_density_kg_per_m3 = self.ac.inputs.hydrogen_density_kg_per_m3 
+        hydrogen_density_kg_per_m3 = self.hydrogen_density_kg_per_m3 
         self.hydrogen_tank_volume_m3 = self.hydrogen_mass_kg / hydrogen_density_kg_per_m3
         
         # Find required tank mass
-        tank_mass_fraction = self.ac.inputs.tank_mass_fraction  
+        tank_mass_fraction = self.tank_mass_fraction  
         self.hydrogen_tank_mass_kg = self.hydrogen_mass_kg * tank_mass_fraction
     
     def __str__(self):

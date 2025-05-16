@@ -2,7 +2,7 @@ import aerosandbox as asb
 
 from Requirements import Requirements
 from Weight_Estimations.Class_I_Weight_Estimation import Class_I_Weight_Estimation
-from Performance.Performance import Performance
+from Performance_Design.Performance import Performance
 
 
 class AircraftInputs:
@@ -26,49 +26,28 @@ class Aircraft:
         # Run atmospheric model
         self.ISA = asb.Atmosphere(altitude=inputs.h_cruise)
         self.rho = self.ISA.density()
-        print(f"Atmospheric model tuned at {inputs.h_cruise}")
         
         # Set up aerodynamic profile
-        wing_airfoil = asb.Airfoil("sd7037")
-        wing = asb.Wing(
-            name       = "Main",
-            symmetric  = True,
-            xsecs=[
-                asb.WingXSec(  # 0
-                    xyz_le=[0, 0, 0],
-                    chord=inputs.chord,
-                    airfoil=wing_airfoil,
-                ),
-                asb.WingXSec(  # 1
-                    xyz_le=[inputs.sweep, inputs.span * (3/4), inputs.dihedral],
-                    chord=inputs.chord,
-                    airfoil=wing_airfoil,
-                ),
-                asb.WingXSec(  # 2
-                    xyz_le=[inputs.sweep * (7/8), inputs.span, inputs.dihedral],
-                    chord=inputs.chord,
-                    airfoil=wing_airfoil,
-                )
-            ]
-        )
-        self.configuration = asb.Airplane(wings=[wing], fuselages=[])
-        print(f"Wing & Fuselage configuration is defined")
+        self.configuration = asb.Airplane(wings=[inputs.wing], fuselages=[])
 
         # Class I weight estimation
-        print(f"Performing Weight Estimation model")
         self.class_I = Class_I_Weight_Estimation(
+            
+            propulsion_type = inputs.propulsion_type,
+            
             payload_weight_kg      = inputs.payload_weight_kg,
             empty_weight_fraction  = inputs.empty_weight_fraction,
             initial_mtow_guess_kg  = inputs.initial_mtow_guess_kg,
             residual_fuel_fraction = inputs.residual_fuel_fraction,
             
-            W1_WTO = inputs.W1_WTO,  W2_W1 = inputs.W2_W1, W3_W2     = inputs.W3_W2,
-            W4_W3  = inputs.W4_W3,   W5_W4 = inputs.W5_W4, W6_W5     = inputs.W6_W5,
-            W7_W6  = inputs.W7_W6,   W8_W7 = inputs.W8_W7, Wfinal_W8 = inputs.Wfinal_W8,
+            W1_WTO = inputs.W1_WTO,   W2_W1 = inputs.W2_W1,   W3_W2     = inputs.W3_W2,
+            W4_W3  = inputs.W4_W3,    W5_W4 = inputs.W5_W4,   W6_W5     = inputs.W6_W5,
+            W7_W6  = inputs.W7_W6,    W8_W7 = inputs.W8_W7,   Wfinal_W8 = inputs.Wfinal_W8,
             
             battery_specific_energy_Wh_per_kg  = inputs.battery_specific_energy_Wh_per_kg,
             battery_power_available  = inputs.battery_power_available,
-            endurance  = inputs.endurance,
+            endurance        = inputs.endurance,
+            charge_endurance = inputs.charge_endurance,
             
             n_p = inputs.n_p, 
             c_p = inputs.c_p,
@@ -79,9 +58,23 @@ class Aircraft:
         )
         
         # Performance
-        print(f"Starting Performance model")
-        self.performance = Performance(ac=self, plot=True)
-        print(f"Ending Performance model")
+        self.performance = Performance(
+            
+            plot = True,
+            n_p = inputs.n_p,
+            h_cruise = inputs.h_cruise,
+            rho = self.rho,
+            g = inputs.g,
+            battery_power_available = inputs.battery_power_available,
+            battery_specific_energy_Wh_per_kg = inputs.battery_specific_energy_Wh_per_kg,
+            propulsion_type = inputs.propulsion_type,
+            endurance = inputs.endurance,
+            charge_endurance = inputs.charge_endurance,
+            configuration = self.configuration,
+            hydrogen_specific_energy_Wh_per_kg = inputs.hydrogen_specific_energy_Wh_per_kg, 
+            hydrogen_density_kg_per_m3 = inputs.hydrogen_density_kg_per_m3, 
+            tank_mass_fraction = inputs.tank_mass_fraction,
+        )
 
 
 if __name__ == "__main__":
@@ -91,6 +84,7 @@ if __name__ == "__main__":
         
         # Mission
         endurance=req.endurance,
+        charge_endurance=0.5,
         g = 9.80665,
         
         # Weights
@@ -106,8 +100,6 @@ if __name__ == "__main__":
         hydrogen_specific_energy_Wh_per_kg = 33333, # 120 MJ/kg in Wh
         hydrogen_density_kg_per_m3 = 42,
         tank_mass_fraction = 0.15,
-        
-        # Currently not using fuel!!!
         residual_fuel_fraction=0.00,
         W1_WTO    = 0.997,
         W2_W1     = 0.995,
@@ -123,24 +115,45 @@ if __name__ == "__main__":
         n_p=0.85, 
         c_p=0.6,
         
-        # Design parameters
-        CL_cruise = 1.2, 
-        CL_TO     = 2.0, 
-        CL_land   = 2.2,
-        
-        # Configuration
-        chord    = 8, 
-        span     = 30,
-        sweep    = 28,
-        dihedral = 5,
-        
         # Choice
         h_cruise        = 15000,
-        propulsion_type = 'battery',
+        propulsion_type = 'hydrogen', # battery (not fully integrated yet!)
+        
+        # Configuration
+        wing = asb.Wing(
+            name       = "Main",
+            symmetric  = True,
+            xsecs=[
+                asb.WingXSec(  # 0
+                    xyz_le=[0, 0, 0],
+                    chord=8,
+                    airfoil=asb.Airfoil("sd7037"),
+                ),
+                asb.WingXSec(  # 1
+                    xyz_le=[10, 20, 5],
+                    chord=8,
+                    airfoil=asb.Airfoil("sd7037"),
+                ),
+                asb.WingXSec(  # 2
+                    xyz_le=[20, 30, 5],
+                    chord=8,
+                    airfoil=asb.Airfoil("sd7037"),
+                )
+            ]
+        )
         
     )
     ac = Aircraft(inputs)
     
+    # Run functions
+    ac.class_I.Determine_MTOW()
+    ac.class_I.Determine_Used_Fuel()
     print(ac.class_I)
-    print(ac.performance)
     
+    ac.performance.optimize_for_maximum_endurance(ac.class_I.estimated_MTOM)
+    ac.performance.find_power_parameters()
+    print(ac.performance)
+
+    ac.configuration.draw_three_view()
+
+
