@@ -3,7 +3,7 @@ import os
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from Performance.weight_performance_main import AircraftInputs
+from Performance.local_main import AircraftInputs
 
 class TestAircraftInputs(unittest.TestCase):
 

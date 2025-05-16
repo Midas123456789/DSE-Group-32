@@ -29,7 +29,7 @@ def motor_weight(P_r):
 
 
 class Tandem_LH:
-    def __init__(self, N_cords = 2, wing_airfoil = asb.Airfoil("sd7037"), altitude = 12e3, mission_days = 7, W_payload = 1000, P_payload = 5e3):
+    def __init__(self, N_cords = 2, wing_airfoil = asb.Airfoil("sd7037"), altitude = 15e3, mission_days = 7, W_payload = 981, P_payload = 20e3):
         #GEOMETRY
         self.N_cords = N_cords
         self.wing_airfoil = wing_airfoil

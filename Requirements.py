@@ -3,7 +3,7 @@ class Requirements:
     def __init__(self):
         
         # Set requirements
-        self.payload_weight_kg = 100    # kg
+        self.payload_weight_kg = 50    # kg
         self.endurance         = 7      # days (right now this is the time of one charge)
-        self.power_available   = 20000  # kW
+        self.power_available   = 100  # kW
         

@@ -75,15 +75,16 @@ class Aircraft:
             hydrogen_specific_energy_Wh_per_kg = inputs.hydrogen_specific_energy_Wh_per_kg, 
             hydrogen_density_kg_per_m3 = inputs.hydrogen_density_kg_per_m3, 
             tank_mass_fraction = inputs.tank_mass_fraction,
+            S = inputs.S,
         )
 
 
 if __name__ == "__main__":
     req = Requirements()
     
-    span = 42.30
+    span = 32.12
     N_cords = 2
-    cords = [2.88, 0.82]
+    cords = [2.68, 0.7]
     wing_airfoil = asb.Airfoil("sd7037")
     
     y_sections = np.linspace(0, span / 2, N_cords)
@@ -218,7 +219,7 @@ if __name__ == "__main__":
         c_p=0.6,
         
         # Choice
-        h_cruise        = 15000,
+        h_cruise        = 17000,
         propulsion_type = 'hydrogen', # battery (not fully integrated yet!)
         
         configuration = configuration,

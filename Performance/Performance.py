@@ -5,7 +5,8 @@ import aerosandbox as asb
 class Performance:
     
     def __init__(self, plot, n_p, h_cruise, rho, g, battery_power_available, battery_specific_energy_Wh_per_kg, 
-                propulsion_type, endurance, charge_endurance, configuration, hydrogen_specific_energy_Wh_per_kg, hydrogen_density_kg_per_m3, tank_mass_fraction):
+                propulsion_type, endurance, charge_endurance, configuration, hydrogen_specific_energy_Wh_per_kg, 
+                hydrogen_density_kg_per_m3, tank_mass_fraction, S):
         
         # Class config
         self.show_plot = plot
@@ -15,6 +16,8 @@ class Performance:
         self.altitude = h_cruise
         self.rho = rho
         self.g = g
+        self.S = S
+        self.configuration = configuration
         self.battery_power_available = battery_power_available  # in W
         self.battery_specific_energy_Wh_per_kg = battery_specific_energy_Wh_per_kg
         self.hydrogen_specific_energy_Wh_per_kg = hydrogen_specific_energy_Wh_per_kg
@@ -40,8 +43,8 @@ class Performance:
     def optimize_for_maximum_endurance(self, estimated_MTOM):
         pass
         self.estimated_MTOM = estimated_MTOM
+        S = self.S
         airplane = self.configuration
-        S = airplane.s_ref
         W = self.estimated_MTOM * self.g
         
         velocities = np.linspace(5, 20, 300)  # avoid V=0
