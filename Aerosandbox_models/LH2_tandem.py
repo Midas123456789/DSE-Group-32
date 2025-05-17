@@ -3,11 +3,11 @@ import aerosandbox.numpy as np
 import matplotlib.pyplot as plt
 
 
-def wing_weight(W_TO, n_ult, A, S, taper_ratio, t_c, V_H):
+def wing_weight(W_TO, n_ult, A, S, taper_ratio, t_c, V_H): # Roskam 5
     W_TO *= 2.20462262
     S *= 10.76
     term1 = (W_TO * n_ult / 1e5)**0.65
-    term2 = A**0.57  # Since cos(sweep) = 1 when sweep = 0
+    term2 = A**0.57 
     term3 = (S / 100)**0.61
     term4 = (((1 + taper_ratio) / 2) / t_c)**0.36
     term5 = (1 + V_H / 500)**0.5
@@ -29,7 +29,7 @@ def motor_weight(P_r):
 
 
 class Tandem_LH:
-    def __init__(self, N_cords = 2, wing_airfoil = asb.Airfoil("sd7037"), altitude = 20e3, mission_days = 7, W_payload = 1000, P_payload = 1e3):
+    def __init__(self, N_cords = 2, wing_airfoil = asb.Airfoil("sd7037"), altitude = 18e3, mission_days = 7, W_payload = 1000, P_payload = 1e3):
         #GEOMETRY
         self.N_cords = N_cords
         self.wing_airfoil = wing_airfoil
@@ -53,14 +53,15 @@ class Tandem_LH:
         #CONSTANTS
         self.g = 9.81
         self.density_LH = 70.85 #kg/m3
-        self.energy_density_LH = 142 * 10 ** 6 #J/kg
-        self.power_density_PEMFCs = 1e3 #W/kg HyPoint 
-        self.PEMFCs_eff = 0.55
+        self.energy_density_LH = 119.88 * 10 ** 6 #J/kg Hydrogen propulsion systems for aircraft, a review on recent advances and ongoing challenges
+        self.power_density_PEMFCs = 1e3 #W/kg Hydrogen propulsion systems for aircraft, a review on recent advances and ongoing challenges
+        self.PEMFCs_eff = 0.55 #Hydrogen propulsion systems for aircraft, a review on recent advances and ongoing challenges
         self.motor_eff = 0.97 #Fundamentals of Aircraft and Airship Design
         self.propeller_eff = 0.85 #Fundamentals of Aircraft and Airship Design
         self.conversion_eff = self.PEMFCs_eff
         self.propulsive_eff = self.conversion_eff * self.motor_eff * self.propeller_eff
-        self.fuel_tank_fuel_mass_fraction = 0.34  # from Brewer, Hydrogen Aircraft Technology pg. 29
+        self.fuel_tank_fuel_mass_fraction = 0.34  # Brewer, Hydrogen Aircraft Technology pg. 29
+        self.insultaion_weight = 120 * self.g #kg Hydrogen Fuel System Design Trades for High-Altitude Long-Endurance RemotelyOperated Aircraft
         
         #OPTI
         self.opti = asb.Opti()
@@ -237,7 +238,7 @@ class Tandem_LH:
         self.W_gear = landing_gear_weight(self.L)
         self.W_motor = motor_weight(self.P_required)
         # Total weight
-        self.W_total = self.W_payload + self.W_wing + self.W_LH + self.W_misc + self.W_tank + self.W_fuel_cell + self.W_avionics + self.W_gear + self.W_motor
+        self.W_total = self.W_payload + self.W_wing + self.W_LH + self.W_misc + self.W_tank + self.W_fuel_cell + self.W_avionics + self.W_gear + self.W_motor + self.insultaion_weight
 
 
     def solve(self):
@@ -453,8 +454,9 @@ class Tandem_LH:
         self.airplane_sol.s_ref = wings[0].area() + wings[1].area()
         
     def draw(self):
-        self.airplane_sol.draw(backend="matplotlib",set_axis_visibility=False, ax=None, thin_wings=True)
+        #self.airplane_sol.draw(backend="matplotlib",set_axis_visibility=False, ax=None, thin_wings=True)
         #self.airplane_sol.draw_three_view()
+        self.airplane_sol.draw()
         
     def plot_aero(self):
         airplane = self.airplane_sol
